@@ -24,12 +24,25 @@
 #include "php_test.h"
 #include "observer.h"
 #include "fiber.h"
+#include "iterators.h"
 #include "zend_attributes.h"
 #include "zend_enum.h"
 #include "zend_interfaces.h"
 #include "zend_weakrefs.h"
 #include "Zend/Optimizer/zend_optimizer.h"
+#include "Zend/zend_alloc.h"
 #include "test_arginfo.h"
+
+// `php.h` sets `NDEBUG` when not `PHP_DEBUG` which will make `assert()` from
+// assert.h a no-op. In order to have `assert()` working on NDEBUG builds, we
+// undefine `NDEBUG` and re-include assert.h
+#undef NDEBUG
+#include "assert.h"
+
+#if defined(HAVE_LIBXML) && !defined(PHP_WIN32)
+# include <libxml/globals.h>
+# include <libxml/parser.h>
+#endif
 
 ZEND_DECLARE_MODULE_GLOBALS(zend_test)
 
@@ -266,6 +279,20 @@ static ZEND_FUNCTION(zend_get_current_func_name)
     RETURN_STR(function_name);
 }
 
+#if defined(HAVE_LIBXML) && !defined(PHP_WIN32)
+static ZEND_FUNCTION(zend_test_override_libxml_global_state)
+{
+	ZEND_PARSE_PARAMETERS_NONE();
+
+	xmlLoadExtDtdDefaultValue = 1;
+	xmlDoValidityCheckingDefaultValue = 1;
+	(void) xmlPedanticParserDefault(1);
+	(void) xmlSubstituteEntitiesDefault(1);
+	(void) xmlLineNumbersDefault(1);
+	(void) xmlKeepBlanksDefault(0);
+}
+#endif
+
 /* TESTS Z_PARAM_ITERABLE and Z_PARAM_ITERABLE_OR_NULL */
 static ZEND_FUNCTION(zend_iterable)
 {
@@ -319,6 +346,101 @@ static ZEND_FUNCTION(zend_test_parameter_with_attribute)
 	ZEND_PARSE_PARAMETERS_END();
 
 	RETURN_LONG(1);
+}
+
+static ZEND_FUNCTION(zend_get_map_ptr_last)
+{
+	ZEND_PARSE_PARAMETERS_NONE();
+	RETURN_LONG(CG(map_ptr_last));
+}
+
+static ZEND_FUNCTION(zend_test_crash)
+{
+	zend_string *message = NULL;
+
+	ZEND_PARSE_PARAMETERS_START(0, 1)
+		Z_PARAM_OPTIONAL
+		Z_PARAM_STR_OR_NULL(message)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if (message) {
+		php_printf("%s", ZSTR_VAL(message));
+	}
+
+	char *invalid = (char *) 1;
+	php_printf("%s", invalid);
+}
+
+static bool has_opline(zend_execute_data *execute_data)
+{
+	return execute_data
+		&& execute_data->func
+		&& ZEND_USER_CODE(execute_data->func->type)
+		&& execute_data->opline
+	;
+}
+
+void * zend_test_custom_malloc(size_t len)
+{
+	if (has_opline(EG(current_execute_data))) {
+		assert(EG(current_execute_data)->opline->lineno != (uint32_t)-1);
+	}
+	return _zend_mm_alloc(ZT_G(zend_orig_heap), len ZEND_FILE_LINE_EMPTY_CC ZEND_FILE_LINE_EMPTY_CC);
+}
+
+void zend_test_custom_free(void *ptr)
+{
+	if (has_opline(EG(current_execute_data))) {
+		assert(EG(current_execute_data)->opline->lineno != (uint32_t)-1);
+	}
+	_zend_mm_free(ZT_G(zend_orig_heap), ptr ZEND_FILE_LINE_EMPTY_CC ZEND_FILE_LINE_EMPTY_CC);
+}
+
+void * zend_test_custom_realloc(void * ptr, size_t len)
+{
+	if (has_opline(EG(current_execute_data))) {
+		assert(EG(current_execute_data)->opline->lineno != (uint32_t)-1);
+	}
+	return _zend_mm_realloc(ZT_G(zend_orig_heap), ptr, len ZEND_FILE_LINE_EMPTY_CC ZEND_FILE_LINE_EMPTY_CC);
+}
+
+static PHP_INI_MH(OnUpdateZendTestObserveOplineInZendMM)
+{
+	if (new_value == NULL) {
+		return FAILURE;
+	}
+
+	int int_value = zend_ini_parse_bool(new_value);
+
+	if (int_value == 1) {
+		// `zend_mm_heap` is a private struct, so we have not way to find the
+		// actual size, but 4096 bytes should be enough
+		ZT_G(zend_test_heap) = malloc(4096);
+		memset(ZT_G(zend_test_heap), 0, 4096);
+		zend_mm_set_custom_handlers(
+			ZT_G(zend_test_heap),
+			zend_test_custom_malloc,
+			zend_test_custom_free,
+			zend_test_custom_realloc
+		);
+		ZT_G(zend_orig_heap) = zend_mm_get_heap();
+		zend_mm_set_heap(ZT_G(zend_test_heap));
+	} else if (ZT_G(zend_test_heap))  {
+		free(ZT_G(zend_test_heap));
+		ZT_G(zend_test_heap) = NULL;
+		zend_mm_set_heap(ZT_G(zend_orig_heap));
+	}
+	return OnUpdateBool(entry, new_value, mh_arg1, mh_arg2, mh_arg3, stage);
+}
+
+static ZEND_FUNCTION(zend_test_is_pcre_bundled)
+{
+	ZEND_PARSE_PARAMETERS_NONE();
+#if HAVE_BUNDLED_PCRE
+	RETURN_TRUE;
+#else
+	RETURN_FALSE;
+#endif
 }
 
 static zend_object *zend_test_class_new(zend_class_entry *class_type)
@@ -406,6 +528,31 @@ static ZEND_METHOD(_ZendTestClass, returnsThrowable)
 	zend_throw_error(NULL, "Dummy");
 }
 
+static ZEND_METHOD(_ZendTestClass, variadicTest) {
+	int      argc, i;
+	zval    *args = NULL;
+
+	ZEND_PARSE_PARAMETERS_START(0, -1)
+		Z_PARAM_VARIADIC('*', args, argc)
+	ZEND_PARSE_PARAMETERS_END();
+
+	for (i = 0; i < argc; i++) {
+		zval *arg = args + i;
+
+		if (Z_TYPE_P(arg) == IS_STRING) {
+			continue;
+		}
+		if (Z_TYPE_P(arg) == IS_OBJECT && instanceof_function(Z_OBJ_P(arg)->ce, zend_ce_iterator)) {
+			continue;
+		}
+
+		zend_argument_type_error(i + 1, "must be of class Iterator or a string, %s given", zend_zval_type_name(arg));
+		RETURN_THROWS();
+	}
+
+	object_init_ex(return_value, zend_get_called_scope(execute_data));
+}
+
 static ZEND_METHOD(_ZendTestChildClass, returnsThrowable)
 {
 	ZEND_PARSE_PARAMETERS_NONE();
@@ -480,6 +627,7 @@ static ZEND_METHOD(ZendTestChildClassWithMethodWithParameterAttribute, override)
 PHP_INI_BEGIN()
 	STD_PHP_INI_BOOLEAN("zend_test.replace_zend_execute_ex", "0", PHP_INI_SYSTEM, OnUpdateBool, replace_zend_execute_ex, zend_zend_test_globals, zend_test_globals)
 	STD_PHP_INI_BOOLEAN("zend_test.register_passes", "0", PHP_INI_SYSTEM, OnUpdateBool, register_passes, zend_zend_test_globals, zend_test_globals)
+	STD_PHP_INI_BOOLEAN("zend_test.observe_opline_in_zendmm", "0", PHP_INI_ALL, OnUpdateZendTestObserveOplineInZendMM, observe_opline_in_zendmm, zend_zend_test_globals, zend_test_globals)
 PHP_INI_END()
 
 void (*old_zend_execute_ex)(zend_execute_data *execute_data);
@@ -593,6 +741,7 @@ PHP_MINIT_FUNCTION(zend_test)
 
 	zend_test_observer_init(INIT_FUNC_ARGS_PASSTHRU);
 	zend_test_fiber_init();
+	zend_test_iterators_init();
 
 	return SUCCESS;
 }
@@ -621,6 +770,13 @@ PHP_RSHUTDOWN_FUNCTION(zend_test)
 		zend_weakrefs_hash_del(&ZT_G(global_weakmap), (zend_object *)(uintptr_t)objptr);
 	} ZEND_HASH_FOREACH_END();
 	zend_hash_destroy(&ZT_G(global_weakmap));
+
+	if (ZT_G(zend_test_heap))  {
+		free(ZT_G(zend_test_heap));
+		ZT_G(zend_test_heap) = NULL;
+		zend_mm_set_heap(ZT_G(zend_orig_heap));
+	}
+
 	return SUCCESS;
 }
 

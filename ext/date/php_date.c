@@ -1958,13 +1958,25 @@ static void php_timezone_to_string(php_timezone_obj *tzobj, zval *zv)
 			ZVAL_STRING(zv, tzobj->tzi.tz->name);
 			break;
 		case TIMELIB_ZONETYPE_OFFSET: {
-			zend_string *tmpstr = zend_string_alloc(sizeof("UTC+05:00")-1, 0);
 			timelib_sll utc_offset = tzobj->tzi.utc_offset;
+			int seconds = utc_offset % 60;
+			size_t size;
+			const char *format;
+			if (seconds == 0) {
+				size = sizeof("+05:00");
+				format = "%c%02d:%02d";
+			} else {
+				size = sizeof("+05:00:01");
+				format = "%c%02d:%02d:%02d";
+			}
+			zend_string *tmpstr = zend_string_alloc(size - 1, 0);
 
-			ZSTR_LEN(tmpstr) = snprintf(ZSTR_VAL(tmpstr), sizeof("+05:00"), "%c%02d:%02d",
+			/* Note: if seconds == 0, the seconds argument will be excessive and therefore ignored. */
+			ZSTR_LEN(tmpstr) = snprintf(ZSTR_VAL(tmpstr), size, format,
 				utc_offset < 0 ? '-' : '+',
 				abs((int)(utc_offset / 3600)),
-				abs((int)(utc_offset % 3600) / 60));
+				abs((int)(utc_offset % 3600) / 60),
+				abs(seconds));
 
 			ZVAL_NEW_STR(zv, tmpstr);
 			}
@@ -2089,7 +2101,7 @@ static HashTable *date_object_get_properties_interval(zend_object *object) /* {{
 	PHP_DATE_INTERVAL_ADD_PROPERTY("weekday_behavior", weekday_behavior);
 	PHP_DATE_INTERVAL_ADD_PROPERTY("first_last_day_of", first_last_day_of);
 	PHP_DATE_INTERVAL_ADD_PROPERTY("invert", invert);
-	if (intervalobj->diff->days != -99999) {
+	if (intervalobj->diff->days != TIMELIB_UNSET) {
 		PHP_DATE_INTERVAL_ADD_PROPERTY("days", days);
 	} else {
 		ZVAL_FALSE(&zv);
@@ -2722,7 +2734,7 @@ void php_date_do_return_parsed_time(INTERNAL_FUNCTION_PARAMETERS, timelib_time *
 
 	array_init(return_value);
 #define PHP_DATE_PARSE_DATE_SET_TIME_ELEMENT(name, elem) \
-	if (parsed_time->elem == -99999) {               \
+	if (parsed_time->elem == TIMELIB_UNSET) {               \
 		add_assoc_bool(return_value, #name, 0); \
 	} else {                                       \
 		add_assoc_long(return_value, #name, parsed_time->elem); \
@@ -2734,7 +2746,7 @@ void php_date_do_return_parsed_time(INTERNAL_FUNCTION_PARAMETERS, timelib_time *
 	PHP_DATE_PARSE_DATE_SET_TIME_ELEMENT(minute,    i);
 	PHP_DATE_PARSE_DATE_SET_TIME_ELEMENT(second,    s);
 
-	if (parsed_time->us == -99999) {
+	if (parsed_time->us == TIMELIB_UNSET) {
 		add_assoc_bool(return_value, "fraction", 0);
 	} else {
 		add_assoc_double(return_value, "fraction", (double)parsed_time->us / 1000000.0);
@@ -2869,21 +2881,21 @@ static int php_date_modify(zval *object, char *modify, size_t modify_len) /* {{{
 	dateobj->time->have_relative = tmp_time->have_relative;
 	dateobj->time->sse_uptodate = 0;
 
-	if (tmp_time->y != -99999) {
+	if (tmp_time->y != TIMELIB_UNSET) {
 		dateobj->time->y = tmp_time->y;
 	}
-	if (tmp_time->m != -99999) {
+	if (tmp_time->m != TIMELIB_UNSET) {
 		dateobj->time->m = tmp_time->m;
 	}
-	if (tmp_time->d != -99999) {
+	if (tmp_time->d != TIMELIB_UNSET) {
 		dateobj->time->d = tmp_time->d;
 	}
 
-	if (tmp_time->h != -99999) {
+	if (tmp_time->h != TIMELIB_UNSET) {
 		dateobj->time->h = tmp_time->h;
-		if (tmp_time->i != -99999) {
+		if (tmp_time->i != TIMELIB_UNSET) {
 			dateobj->time->i = tmp_time->i;
-			if (tmp_time->s != -99999) {
+			if (tmp_time->s != TIMELIB_UNSET) {
 				dateobj->time->s = tmp_time->s;
 			} else {
 				dateobj->time->s = 0;
@@ -2894,12 +2906,18 @@ static int php_date_modify(zval *object, char *modify, size_t modify_len) /* {{{
 		}
 	}
 
-	if (tmp_time->us != -99999) {
+	if (tmp_time->us != TIMELIB_UNSET) {
 		dateobj->time->us = tmp_time->us;
 	}
 
-	if (tmp_time->have_zone && tmp_time->zone_type == TIMELIB_ZONETYPE_OFFSET) {
-		timelib_set_timezone_from_offset(dateobj->time, tmp_time->z);
+	/* Reset timezone to UTC if we detect a "@<ts>" modification */
+	if (
+		tmp_time->y == 1970 && tmp_time->m == 1 && tmp_time->d == 1 &&
+		tmp_time->h == 0 && tmp_time->i == 0 && tmp_time->s == 0 && tmp_time->us == 0 &&
+		tmp_time->have_zone && tmp_time->zone_type == TIMELIB_ZONETYPE_OFFSET &&
+		tmp_time->z == 0 && tmp_time->dst == 0
+	) {
+		timelib_set_timezone_from_offset(dateobj->time, 0);
 	}
 
 	timelib_time_dtor(tmp_time);
@@ -3897,7 +3915,7 @@ static zval *date_interval_read_property(zend_object *object, zend_string *name,
 
 	if (fvalue != -1) {
 		ZVAL_DOUBLE(retval, fvalue);
-	} else if (value != -99999) {
+	} else if (value != TIMELIB_UNSET) {
 		ZVAL_LONG(retval, value);
 	} else {
 		ZVAL_FALSE(retval);
@@ -4022,7 +4040,7 @@ static int php_date_interval_initialize_from_hash(zval **return_value, php_inter
 	do { \
 		zval *z_arg = zend_hash_str_find(myht, "days", sizeof("days") - 1); \
 		if (z_arg && Z_TYPE_P(z_arg) == IS_FALSE) { \
-			(*intobj)->diff->member = -99999; \
+			(*intobj)->diff->member = TIMELIB_UNSET; \
 		} else if (z_arg && Z_TYPE_P(z_arg) <= IS_STRING) { \
 			zend_string *str = zval_get_string(z_arg); \
 			DATE_A64I((*intobj)->diff->member, ZSTR_VAL(str)); \
@@ -4182,7 +4200,7 @@ static zend_string *date_interval_format(char *format, size_t format_len, timeli
 				case 'f': length = slprintf(buffer, sizeof(buffer), ZEND_LONG_FMT, (zend_long) t->us); break;
 
 				case 'a': {
-					if ((int) t->days != -99999) {
+					if ((int) t->days != TIMELIB_UNSET) {
 						length = slprintf(buffer, sizeof(buffer), "%d", (int) t->days);
 					} else {
 						length = slprintf(buffer, sizeof(buffer), "(unknown)");
@@ -4321,6 +4339,12 @@ PHP_METHOD(DatePeriod, __construct)
 		}
 		dpobj->start_ce = date_ce_date;
 	} else {
+		/* check initialisation */
+		DATE_CHECK_INITIALIZED(Z_PHPDATE_P(start)->time, DateTimeInterface);
+		if (end) {
+			DATE_CHECK_INITIALIZED(Z_PHPDATE_P(end)->time, DateTimeInterface);
+		}
+
 		/* init */
 		php_interval_obj *intobj = Z_PHPINTERVAL_P(interval);
 

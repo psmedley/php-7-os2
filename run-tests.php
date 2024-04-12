@@ -582,6 +582,7 @@ function main(): void
                     $environment['SKIP_PERF_SENSITIVE'] = 1;
                     if ($switch === '--msan') {
                         $environment['SKIP_MSAN'] = 1;
+                        $environment['MSAN_OPTIONS'] = 'intercept_tls_get_addr=0';
                     }
 
                     $lsanSuppressions = __DIR__ . '/.github/lsan-suppressions.txt';
@@ -1283,6 +1284,10 @@ function system_with_timeout(
     }
 
     $timeout = $valgrind ? 300 : ($env['TEST_TIMEOUT'] ?? 60);
+    /* ASAN can cause a ~2-3x slowdown. */
+    if (isset($env['SKIP_ASAN'])) {
+        $timeout *= 3;
+    }
 
     while (true) {
         /* hide errors from interrupted syscalls */
@@ -1885,6 +1890,9 @@ function run_test(string $php, $file, array $env): string
         $skipCache = new SkipCache($enableSkipCache, $cfg['keep']['skip']);
     }
 
+    $retried = false;
+retry:
+
     $temp_filenames = null;
     $org_file = $file;
     $orig_php = $php;
@@ -1929,8 +1937,10 @@ TEST $file
 
     $tested = $test->getName();
 
-    if ($num_repeats > 1 && $test->hasSection('FILE_EXTERNAL')) {
-        return skip_test($tested, $tested_file, $shortname, 'Test with FILE_EXTERNAL might not be repeatable');
+    if ($test->hasSection('FILE_EXTERNAL')) {
+        if ($num_repeats > 1) {
+            return skip_test($tested, $tested_file, $shortname, 'Test with FILE_EXTERNAL might not be repeatable');
+        }
     }
 
     if ($test->hasSection('CAPTURE_STDIO')) {
@@ -1978,15 +1988,11 @@ TEST $file
         }
     }
 
-    if ($num_repeats > 1) {
-        if ($test->hasSection('CLEAN')) {
-            return skip_test($tested, $tested_file, $shortname, 'Test with CLEAN might not be repeatable');
-        }
-        if ($test->hasSection('STDIN')) {
-            return skip_test($tested, $tested_file, $shortname, 'Test with STDIN might not be repeatable');
-        }
-        if ($test->hasSection('CAPTURE_STDIO')) {
-            return skip_test($tested, $tested_file, $shortname, 'Test with CAPTURE_STDIO might not be repeatable');
+    foreach (['CLEAN', 'STDIN', 'CAPTURE_STDIO'] as $section) {
+        if ($test->hasSection($section)) {
+            if ($num_repeats > 1) {
+                return skip_test($tested, $tested_file, $shortname, "Test with $section might not be repeatable");
+            }
         }
     }
 
@@ -2165,8 +2171,10 @@ TEST $file
         $ini = preg_replace('/{MAIL:(\S+)}/', $replacement, $ini);
         settings2array(preg_split("/[\n\r]+/", $ini), $ini_settings);
 
-        if ($num_repeats > 1 && isset($ini_settings['opcache.opt_debug_level'])) {
-            return skip_test($tested, $tested_file, $shortname, 'opt_debug_level tests are not repeatable');
+        if (isset($ini_settings['opcache.opt_debug_level'])) {
+            if ($num_repeats > 1) {
+                return skip_test($tested, $tested_file, $shortname, 'opt_debug_level tests are not repeatable');
+            }
         }
     }
 
@@ -2692,6 +2700,9 @@ COMMAND $cmd
                 } elseif ($test->hasSection('XLEAK')) {
                     $warn = true;
                     $info = " (warn: XLEAK section but test passes)";
+                } elseif ($retried) {
+                    $warn = true;
+                    $info = " (warn: Test passed on retry attempt)";
                 } else {
                     show_result("PASS", $tested, $tested_file, '', $temp_filenames);
                     $junit->markTestAs('PASS', $shortname, $tested);
@@ -2721,6 +2732,9 @@ COMMAND $cmd
                 } elseif ($test->hasSection('XLEAK')) {
                     $warn = true;
                     $info = " (warn: XLEAK section but test passes)";
+                } elseif ($retried) {
+                    $warn = true;
+                    $info = " (warn: Test passed on retry attempt)";
                 } else {
                     show_result("PASS", $tested, $tested_file, '', $temp_filenames);
                     $junit->markTestAs('PASS', $shortname, $tested);
@@ -2730,6 +2744,10 @@ COMMAND $cmd
         }
 
         $wanted_re = null;
+    }
+    if (!$passed && !$retried && error_may_be_retried($test, $output)) {
+        $retried = true;
+        goto retry;
     }
 
     // Test failed so we need to report details.
@@ -2853,6 +2871,46 @@ SH;
     $junit->markTestAs($restype, $shortname, $tested, null, $info, $diff);
 
     return $restype[0] . 'ED';
+}
+
+function is_flaky(TestFile $test): bool
+{
+    if ($test->hasSection('FLAKY')) {
+        return true;
+    }
+    if (!$test->hasSection('FILE')) {
+        return false;
+    }
+    $file = $test->getSection('FILE');
+    $flaky_functions = [
+        'disk_free_space',
+        'hrtime',
+        'microtime',
+        'sleep',
+        'usleep',
+    ];
+    $regex = '(\b(' . implode('|', $flaky_functions) . ')\()i';
+    return preg_match($regex, $file) === 1;
+}
+
+function is_flaky_output(string $output): bool
+{
+    $messages = [
+        '404: page not found',
+        'address already in use',
+        'connection refused',
+        'deadlock',
+        'mailbox already exists',
+        'timed out',
+    ];
+    $regex = '(\b(' . implode('|', $messages) . ')\b)i';
+    return preg_match($regex, $output) === 1;
+}
+
+function error_may_be_retried(TestFile $test, string $output): bool
+{
+    return is_flaky_output($output)
+        || is_flaky($test);
 }
 
 /**
@@ -3836,6 +3894,7 @@ class TestFile
         'INI', 'ENV', 'EXTENSIONS',
         'SKIPIF', 'XFAIL', 'XLEAK', 'CLEAN',
         'CREDITS', 'DESCRIPTION', 'CONFLICTS', 'WHITESPACE_SENSITIVE',
+        'FLAKY',
     ];
 
     /**

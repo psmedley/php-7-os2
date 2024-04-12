@@ -1238,7 +1238,7 @@ PHP_FUNCTION(implode)
 
 	if (pieces == NULL) {
 		if (arg1_array == NULL) {
-			zend_type_error("%s(): Argument #1 ($pieces) must be of type array, string given", get_active_function_name());
+			zend_type_error("%s(): Argument #1 ($array) must be of type array, string given", get_active_function_name());
 			RETURN_THROWS();
 		}
 
@@ -1373,7 +1373,7 @@ PHPAPI zend_string *php_string_toupper(zend_string *s)
 			if (c != (unsigned char*)ZSTR_VAL(s)) {
 				memcpy(ZSTR_VAL(res), ZSTR_VAL(s), c - (unsigned char*)ZSTR_VAL(s));
 			}
-			r = c + (ZSTR_VAL(res) - ZSTR_VAL(s));
+			r = (unsigned char*) ZSTR_VAL(res) + (c - (unsigned char*) ZSTR_VAL(s));
 			while (c < e) {
 				*r = toupper(*c);
 				r++;
@@ -1438,7 +1438,7 @@ PHPAPI zend_string *php_string_tolower(zend_string *s)
 				if (c != (unsigned char*)ZSTR_VAL(s)) {
 					memcpy(ZSTR_VAL(res), ZSTR_VAL(s), c - (unsigned char*)ZSTR_VAL(s));
 				}
-				r = c + (ZSTR_VAL(res) - ZSTR_VAL(s));
+				r = (unsigned char*) ZSTR_VAL(res) + (c - (unsigned char*) ZSTR_VAL(s));
 				while (c < e) {
 					*r = tolower(*c);
 					r++;

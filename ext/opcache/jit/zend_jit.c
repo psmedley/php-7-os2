@@ -650,7 +650,11 @@ static zend_property_info* zend_get_known_property_info(const zend_op_array *op_
 		return info;
 	} else if (on_this) {
 		if (ce == info->ce) {
-			return info;
+			if (ce == op_array->scope) {
+				return info;
+			} else {
+				return NULL;
+			}
 		} else if ((info->flags & ZEND_ACC_PROTECTED)
 				&& instanceof_function_slow(ce, info->ce)) {
 			return info;
@@ -5109,7 +5113,7 @@ ZEND_EXT_API void zend_jit_activate(void)
 
 ZEND_EXT_API void zend_jit_deactivate(void)
 {
-	if (zend_jit_profile_counter) {
+	if (zend_jit_profile_counter && !CG(unclean_shutdown)) {
 		zend_class_entry *ce;
 
 		zend_shared_alloc_lock();
@@ -5127,9 +5131,9 @@ ZEND_EXT_API void zend_jit_deactivate(void)
 		zend_jit_protect();
 		SHM_PROTECT();
 		zend_shared_alloc_unlock();
-
-		zend_jit_profile_counter = 0;
 	}
+
+	zend_jit_profile_counter = 0;
 }
 
 static void zend_jit_restart_preloaded_op_array(zend_op_array *op_array)

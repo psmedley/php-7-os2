@@ -1,12 +1,12 @@
 env:
   CIRRUS_CLONE_DEPTH: 1
-  ARCH: amd64
 
-freebsd_instance:
-  image_family: freebsd-13-0
-
-task:
+freebsd_task:
   name: FREEBSD_DEBUG_NTS
+  freebsd_instance:
+    image_family: freebsd-13-2
+  env:
+    ARCH: amd64
   install_script:
     #- sed -i -e 's/quarterly/latest/g' /etc/pkg/FreeBSD.conf
     #- pkg upgrade -y

@@ -30,6 +30,8 @@ namespace {
         public function returnsStatic(): static {}
 
         public function returnsThrowable(): Throwable {}
+
+        static public function variadicTest(string|Iterator ...$elements) : static {}
     }
 
     class _ZendTestChildClass extends _ZendTestClass
@@ -115,6 +117,16 @@ namespace {
     function zend_get_current_func_name(): string {}
 
     function zend_call_method(string $class, string $method, mixed $arg1 = UNKNOWN, mixed $arg2 = UNKNOWN): mixed {}
+
+    function zend_get_map_ptr_last(): int {}
+
+    function zend_test_crash(?string $message = null): void {}
+
+#if defined(HAVE_LIBXML) && !defined(PHP_WIN32)
+function zend_test_override_libxml_global_state(): void {}
+#endif
+
+    function zend_test_is_pcre_bundled(): bool {}
 }
 
 namespace ZendTestNS {
