@@ -7,10 +7,10 @@ m4trace:configure.ac:11: -1- m4_include([build/php.m4])
 m4trace:configure.ac:12: -1- m4_include([build/pkg.m4])
 m4trace:configure.ac:13: -1- m4_include([TSRM/threads.m4])
 m4trace:configure.ac:14: -1- m4_include([TSRM/tsrm.m4])
-m4trace:configure.ac:20: -1- AC_INIT([PHP], [8.1.28], [https://github.com/php/php-src/issues], [php], [https://www.php.net])
+m4trace:configure.ac:20: -1- AC_INIT([PHP], [8.1.31], [https://github.com/php/php-src/issues], [php], [https://www.php.net])
 m4trace:configure.ac:20: -1- m4_pattern_forbid([^_?A[CHUM]_])
 m4trace:configure.ac:20: -1- m4_pattern_forbid([_AC_])
-m4trace:configure.ac:20: -1- m4_pattern_forbid([^LIBOBJS$], [do not use LIBOBJS directly, use AC_LIBOBJ (see section `AC_LIBOBJ vs LIBOBJS'])
+m4trace:configure.ac:20: -1- m4_pattern_forbid([^LIBOBJS$], [do not use LIBOBJS directly, use AC_LIBOBJ (see section 'AC_LIBOBJ vs LIBOBJS'])
 m4trace:configure.ac:20: -1- m4_pattern_allow([^AS_FLAGS$])
 m4trace:configure.ac:20: -1- m4_pattern_forbid([^_?m4_])
 m4trace:configure.ac:20: -1- m4_pattern_forbid([^dnl$])
@@ -311,7 +311,7 @@ m4trace:configure.ac:134: -1- m4_pattern_allow([^CPPFLAGS$])
 m4trace:configure.ac:134: -1- AC_SUBST([CPP])
 m4trace:configure.ac:134: -1- AC_SUBST_TRACE([CPP])
 m4trace:configure.ac:134: -1- m4_pattern_allow([^CPP$])
-m4trace:configure.ac:135: -1- AH_OUTPUT([USE_SYSTEM_EXTENSIONS], [/* Enable extensions on AIX 3, Interix.  */
+m4trace:configure.ac:135: -1- AH_OUTPUT([USE_SYSTEM_EXTENSIONS], [/* Enable extensions on AIX, Interix, z/OS.  */
 #ifndef _ALL_SOURCE
 # undef _ALL_SOURCE
 #endif
@@ -372,11 +372,15 @@ m4trace:configure.ac:135: -1- AH_OUTPUT([USE_SYSTEM_EXTENSIONS], [/* Enable exte
 #ifndef __STDC_WANT_IEC_60559_DFP_EXT__
 # undef __STDC_WANT_IEC_60559_DFP_EXT__
 #endif
+/* Enable extensions specified by C23 Annex F.  */
+#ifndef __STDC_WANT_IEC_60559_EXT__
+# undef __STDC_WANT_IEC_60559_EXT__
+#endif
 /* Enable extensions specified by ISO/IEC TS 18661-4:2015.  */
 #ifndef __STDC_WANT_IEC_60559_FUNCS_EXT__
 # undef __STDC_WANT_IEC_60559_FUNCS_EXT__
 #endif
-/* Enable extensions specified by ISO/IEC TS 18661-3:2015.  */
+/* Enable extensions specified by C23 Annex H and ISO/IEC TS 18661-3:2015.  */
 #ifndef __STDC_WANT_IEC_60559_TYPES_EXT__
 # undef __STDC_WANT_IEC_60559_TYPES_EXT__
 #endif
@@ -418,7 +422,7 @@ m4trace:configure.ac:135: -1- AH_OUTPUT([HAVE_UNISTD_H], [/* Define to 1 if you 
 @%:@undef HAVE_UNISTD_H])
 m4trace:configure.ac:135: -1- AC_DEFINE_TRACE_LITERAL([STDC_HEADERS])
 m4trace:configure.ac:135: -1- m4_pattern_allow([^STDC_HEADERS$])
-m4trace:configure.ac:135: -1- AH_OUTPUT([STDC_HEADERS], [/* Define to 1 if all of the C90 standard headers exist (not just the ones
+m4trace:configure.ac:135: -1- AH_OUTPUT([STDC_HEADERS], [/* Define to 1 if all of the C89 standard headers exist (not just the ones
    required in a freestanding environment). This macro is provided for
    backward compatibility; new code need not use it. */
 @%:@undef STDC_HEADERS])
@@ -446,6 +450,8 @@ m4trace:configure.ac:135: -1- AC_DEFINE_TRACE_LITERAL([__STDC_WANT_IEC_60559_BFP
 m4trace:configure.ac:135: -1- m4_pattern_allow([^__STDC_WANT_IEC_60559_BFP_EXT__$])
 m4trace:configure.ac:135: -1- AC_DEFINE_TRACE_LITERAL([__STDC_WANT_IEC_60559_DFP_EXT__])
 m4trace:configure.ac:135: -1- m4_pattern_allow([^__STDC_WANT_IEC_60559_DFP_EXT__$])
+m4trace:configure.ac:135: -1- AC_DEFINE_TRACE_LITERAL([__STDC_WANT_IEC_60559_EXT__])
+m4trace:configure.ac:135: -1- m4_pattern_allow([^__STDC_WANT_IEC_60559_EXT__$])
 m4trace:configure.ac:135: -1- AC_DEFINE_TRACE_LITERAL([__STDC_WANT_IEC_60559_FUNCS_EXT__])
 m4trace:configure.ac:135: -1- m4_pattern_allow([^__STDC_WANT_IEC_60559_FUNCS_EXT__$])
 m4trace:configure.ac:135: -1- AC_DEFINE_TRACE_LITERAL([__STDC_WANT_IEC_60559_TYPES_EXT__])
@@ -513,7 +519,7 @@ m4trace:configure.ac:280: -1- m4_pattern_allow([^SHLIB_DL_SUFFIX_NAME$])
 m4trace:configure.ac:294: -1- sinclude([sapi/*/config0.m4])
 m4trace:configure.ac:294: -1- sinclude([sapi/apache2handler/config.m4])
 m4trace:configure.ac:294: -1- sinclude([sapi/cli/config.m4])
-m4trace:sapi/cli/config.m4:7: -1- AH_OUTPUT([HAVE_SETPROCTITLE], [/* Define to 1 if you have the `setproctitle\' function. */
+m4trace:sapi/cli/config.m4:7: -1- AH_OUTPUT([HAVE_SETPROCTITLE], [/* Define to 1 if you have the \'setproctitle\' function. */
 @%:@undef HAVE_SETPROCTITLE])
 m4trace:sapi/cli/config.m4:7: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETPROCTITLE])
 m4trace:sapi/cli/config.m4:7: -1- m4_pattern_allow([^HAVE_SETPROCTITLE$])
@@ -527,15 +533,15 @@ m4trace:sapi/cli/config.m4:20: -1- AH_OUTPUT([HAVE_PS_STRINGS], [/* Define to 1 
 @%:@undef HAVE_PS_STRINGS])
 m4trace:configure.ac:294: -1- sinclude([sapi/embed/config.m4])
 m4trace:configure.ac:294: -1- sinclude([sapi/fpm/config.m4])
-m4trace:sapi/fpm/config.m4:495: -1- AH_OUTPUT([HAVE_CLEARENV], [/* Define to 1 if you have the `clearenv\' function. */
+m4trace:sapi/fpm/config.m4:495: -1- AH_OUTPUT([HAVE_CLEARENV], [/* Define to 1 if you have the \'clearenv\' function. */
 @%:@undef HAVE_CLEARENV])
 m4trace:sapi/fpm/config.m4:495: -1- AC_DEFINE_TRACE_LITERAL([HAVE_CLEARENV])
 m4trace:sapi/fpm/config.m4:495: -1- m4_pattern_allow([^HAVE_CLEARENV$])
-m4trace:sapi/fpm/config.m4:495: -1- AH_OUTPUT([HAVE_SETPROCTITLE], [/* Define to 1 if you have the `setproctitle\' function. */
+m4trace:sapi/fpm/config.m4:495: -1- AH_OUTPUT([HAVE_SETPROCTITLE], [/* Define to 1 if you have the \'setproctitle\' function. */
 @%:@undef HAVE_SETPROCTITLE])
 m4trace:sapi/fpm/config.m4:495: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETPROCTITLE])
 m4trace:sapi/fpm/config.m4:495: -1- m4_pattern_allow([^HAVE_SETPROCTITLE$])
-m4trace:sapi/fpm/config.m4:495: -1- AH_OUTPUT([HAVE_SETPROCTITLE_FAST], [/* Define to 1 if you have the `setproctitle_fast\' function. */
+m4trace:sapi/fpm/config.m4:495: -1- AH_OUTPUT([HAVE_SETPROCTITLE_FAST], [/* Define to 1 if you have the \'setproctitle_fast\' function. */
 @%:@undef HAVE_SETPROCTITLE_FAST])
 m4trace:sapi/fpm/config.m4:495: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETPROCTITLE_FAST])
 m4trace:sapi/fpm/config.m4:495: -1- m4_pattern_allow([^HAVE_SETPROCTITLE_FAST$])
@@ -698,7 +704,7 @@ m4trace:configure.ac:294: -1- sinclude([sapi/litespeed/config.m4])
 m4trace:configure.ac:294: -1- sinclude([sapi/phpdbg/config.m4])
 m4trace:sapi/phpdbg/config.m4:23: -1- AC_DEFINE_TRACE_LITERAL([GWINSZ_IN_SYS_IOCTL])
 m4trace:sapi/phpdbg/config.m4:23: -1- m4_pattern_allow([^GWINSZ_IN_SYS_IOCTL$])
-m4trace:sapi/phpdbg/config.m4:23: -1- AH_OUTPUT([GWINSZ_IN_SYS_IOCTL], [/* Define to 1 if `TIOCGWINSZ\' requires <sys/ioctl.h>. */
+m4trace:sapi/phpdbg/config.m4:23: -1- AH_OUTPUT([GWINSZ_IN_SYS_IOCTL], [/* Define to 1 if \'TIOCGWINSZ\' requires <sys/ioctl.h>. */
 @%:@undef GWINSZ_IN_SYS_IOCTL])
 m4trace:sapi/phpdbg/config.m4:24: -1- AC_DEFINE_TRACE_LITERAL([HAVE_PHPDBG])
 m4trace:sapi/phpdbg/config.m4:24: -1- m4_pattern_allow([^HAVE_PHPDBG$])
@@ -880,7 +886,7 @@ m4trace:configure.ac:366: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LIBDL])
 m4trace:configure.ac:366: -1- m4_pattern_allow([^HAVE_LIBDL$])
 m4trace:configure.ac:366: -1- AH_OUTPUT([HAVE_LIBDL], [/* */
 @%:@undef HAVE_LIBDL])
-m4trace:configure.ac:368: -1- AH_OUTPUT([HAVE_LIBM], [/* Define to 1 if you have the `m\' library (-lm). */
+m4trace:configure.ac:368: -1- AH_OUTPUT([HAVE_LIBM], [/* Define to 1 if you have the \'m\' library (-lm). */
 @%:@undef HAVE_LIBM])
 m4trace:configure.ac:368: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LIBM])
 m4trace:configure.ac:368: -1- m4_pattern_allow([^HAVE_LIBM$])
@@ -1130,26 +1136,26 @@ m4trace:configure.ac:452: -1- AH_OUTPUT([HAVE_BROKEN_GETCWD], [/* Define if syst
 @%:@undef HAVE_BROKEN_GETCWD])
 m4trace:configure.ac:460: -1- AC_DEFINE_TRACE_LITERAL([TM_IN_SYS_TIME])
 m4trace:configure.ac:460: -1- m4_pattern_allow([^TM_IN_SYS_TIME$])
-m4trace:configure.ac:460: -1- AH_OUTPUT([TM_IN_SYS_TIME], [/* Define to 1 if your <sys/time.h> declares `struct tm\'. */
+m4trace:configure.ac:460: -1- AH_OUTPUT([TM_IN_SYS_TIME], [/* Define to 1 if your <sys/time.h> declares \'struct tm\'. */
 @%:@undef TM_IN_SYS_TIME])
 m4trace:configure.ac:460: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRUCT_TM_TM_ZONE])
 m4trace:configure.ac:460: -1- m4_pattern_allow([^HAVE_STRUCT_TM_TM_ZONE$])
-m4trace:configure.ac:460: -1- AH_OUTPUT([HAVE_STRUCT_TM_TM_ZONE], [/* Define to 1 if `tm_zone\' is a member of `struct tm\'. */
+m4trace:configure.ac:460: -1- AH_OUTPUT([HAVE_STRUCT_TM_TM_ZONE], [/* Define to 1 if \'tm_zone\' is a member of \'struct tm\'. */
 @%:@undef HAVE_STRUCT_TM_TM_ZONE])
 m4trace:configure.ac:460: -1- AC_DEFINE_TRACE_LITERAL([HAVE_TM_ZONE])
 m4trace:configure.ac:460: -1- m4_pattern_allow([^HAVE_TM_ZONE$])
-m4trace:configure.ac:460: -1- AH_OUTPUT([HAVE_TM_ZONE], [/* Define to 1 if your `struct tm\' has `tm_zone\'. Deprecated, use
-   `HAVE_STRUCT_TM_TM_ZONE\' instead. */
+m4trace:configure.ac:460: -1- AH_OUTPUT([HAVE_TM_ZONE], [/* Define to 1 if your \'struct tm\' has \'tm_zone\'. Deprecated, use
+   \'HAVE_STRUCT_TM_TM_ZONE\' instead. */
 @%:@undef HAVE_TM_ZONE])
 m4trace:configure.ac:460: -1- AC_DEFINE_TRACE_LITERAL([HAVE_DECL_TZNAME])
 m4trace:configure.ac:460: -1- m4_pattern_allow([^HAVE_DECL_TZNAME$])
-m4trace:configure.ac:460: -1- AH_OUTPUT([HAVE_DECL_TZNAME], [/* Define to 1 if you have the declaration of `tzname\', and to 0 if you don\'t.
+m4trace:configure.ac:460: -1- AH_OUTPUT([HAVE_DECL_TZNAME], [/* Define to 1 if you have the declaration of \'tzname\', and to 0 if you don\'t.
    */
 @%:@undef HAVE_DECL_TZNAME])
 m4trace:configure.ac:460: -1- AC_DEFINE_TRACE_LITERAL([HAVE_TZNAME])
 m4trace:configure.ac:460: -1- m4_pattern_allow([^HAVE_TZNAME$])
-m4trace:configure.ac:460: -1- AH_OUTPUT([HAVE_TZNAME], [/* Define to 1 if you don\'t have `tm_zone\' but do have the external array
-   `tzname\'. */
+m4trace:configure.ac:460: -1- AH_OUTPUT([HAVE_TZNAME], [/* Define to 1 if you don\'t have \'tm_zone\' but do have the external array
+   \'tzname\'. */
 @%:@undef HAVE_TZNAME])
 m4trace:configure.ac:462: -1- AC_DEFINE_TRACE_LITERAL([MISSING_LOCALTIME_R_DECL])
 m4trace:configure.ac:462: -1- m4_pattern_allow([^MISSING_LOCALTIME_R_DECL$])
@@ -1185,7 +1191,7 @@ m4trace:configure.ac:464: -1- AH_OUTPUT([HAVE_STRUCT_FLOCK], [/* whether you hav
 @%:@undef HAVE_STRUCT_FLOCK])
 m4trace:configure.ac:466: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SOCKLEN_T])
 m4trace:configure.ac:466: -1- m4_pattern_allow([^HAVE_SOCKLEN_T$])
-m4trace:configure.ac:466: -1- AH_OUTPUT([HAVE_SOCKLEN_T], [/* Define to 1 if the system has the type `socklen_t\'. */
+m4trace:configure.ac:466: -1- AH_OUTPUT([HAVE_SOCKLEN_T], [/* Define to 1 if the system has the type \'socklen_t\'. */
 @%:@undef HAVE_SOCKLEN_T])
 m4trace:configure.ac:476: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_INTMAX_T])
 m4trace:configure.ac:476: -1- m4_pattern_allow([^SIZEOF_INTMAX_T$])
@@ -1213,59 +1219,59 @@ m4trace:configure.ac:478: -1- AH_OUTPUT([HAVE_PTRDIFF_T], [/* Whether ptrdiff_t 
 @%:@undef HAVE_PTRDIFF_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_SHORT])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^SIZEOF_SHORT$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_SHORT], [/* The size of `short\', as computed by sizeof. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_SHORT], [/* The size of \'short\', as computed by sizeof. */
 @%:@undef SIZEOF_SHORT])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_INT])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^SIZEOF_INT$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_INT], [/* The size of `int\', as computed by sizeof. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_INT], [/* The size of \'int\', as computed by sizeof. */
 @%:@undef SIZEOF_INT])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_LONG])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^SIZEOF_LONG$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of `long\', as computed by sizeof. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of \'long\', as computed by sizeof. */
 @%:@undef SIZEOF_LONG])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_LONG_LONG])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^SIZEOF_LONG_LONG$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_LONG_LONG], [/* The size of `long long\', as computed by sizeof. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_LONG_LONG], [/* The size of \'long long\', as computed by sizeof. */
 @%:@undef SIZEOF_LONG_LONG])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_SIZE_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^SIZEOF_SIZE_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_SIZE_T], [/* The size of `size_t\', as computed by sizeof. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_SIZE_T], [/* The size of \'size_t\', as computed by sizeof. */
 @%:@undef SIZEOF_SIZE_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_OFF_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^SIZEOF_OFF_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_OFF_T], [/* The size of `off_t\', as computed by sizeof. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([SIZEOF_OFF_T], [/* The size of \'off_t\', as computed by sizeof. */
 @%:@undef SIZEOF_OFF_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([HAVE_INT8_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^HAVE_INT8_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_INT8_T], [/* Define to 1 if the system has the type `int8_t\'. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_INT8_T], [/* Define to 1 if the system has the type \'int8_t\'. */
 @%:@undef HAVE_INT8_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([HAVE_INT16_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^HAVE_INT16_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_INT16_T], [/* Define to 1 if the system has the type `int16_t\'. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_INT16_T], [/* Define to 1 if the system has the type \'int16_t\'. */
 @%:@undef HAVE_INT16_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([HAVE_INT32_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^HAVE_INT32_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_INT32_T], [/* Define to 1 if the system has the type `int32_t\'. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_INT32_T], [/* Define to 1 if the system has the type \'int32_t\'. */
 @%:@undef HAVE_INT32_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([HAVE_INT64_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^HAVE_INT64_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_INT64_T], [/* Define to 1 if the system has the type `int64_t\'. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_INT64_T], [/* Define to 1 if the system has the type \'int64_t\'. */
 @%:@undef HAVE_INT64_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([HAVE_UINT8_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^HAVE_UINT8_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_UINT8_T], [/* Define to 1 if the system has the type `uint8_t\'. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_UINT8_T], [/* Define to 1 if the system has the type \'uint8_t\'. */
 @%:@undef HAVE_UINT8_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([HAVE_UINT16_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^HAVE_UINT16_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_UINT16_T], [/* Define to 1 if the system has the type `uint16_t\'. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_UINT16_T], [/* Define to 1 if the system has the type \'uint16_t\'. */
 @%:@undef HAVE_UINT16_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([HAVE_UINT32_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^HAVE_UINT32_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_UINT32_T], [/* Define to 1 if the system has the type `uint32_t\'. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_UINT32_T], [/* Define to 1 if the system has the type \'uint32_t\'. */
 @%:@undef HAVE_UINT32_T])
 m4trace:configure.ac:481: -1- AC_DEFINE_TRACE_LITERAL([HAVE_UINT64_T])
 m4trace:configure.ac:481: -1- m4_pattern_allow([^HAVE_UINT64_T$])
-m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_UINT64_T], [/* Define to 1 if the system has the type `uint64_t\'. */
+m4trace:configure.ac:481: -1- AH_OUTPUT([HAVE_UINT64_T], [/* Define to 1 if the system has the type \'uint64_t\'. */
 @%:@undef HAVE_UINT64_T])
 m4trace:configure.ac:484: -1- AC_DEFINE_TRACE_LITERAL([PHP_HAVE_BUILTIN_EXPECT])
 m4trace:configure.ac:484: -1- m4_pattern_allow([^PHP_HAVE_BUILTIN_EXPECT$])
@@ -1329,24 +1335,24 @@ m4trace:configure.ac:523: -1- AH_OUTPUT([HAVE_ALIGNOF], [/* whether the compiler
 @%:@undef HAVE_ALIGNOF])
 m4trace:configure.ac:527: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRUCT_TM_TM_GMTOFF])
 m4trace:configure.ac:527: -1- m4_pattern_allow([^HAVE_STRUCT_TM_TM_GMTOFF$])
-m4trace:configure.ac:527: -1- AH_OUTPUT([HAVE_STRUCT_TM_TM_GMTOFF], [/* Define to 1 if `tm_gmtoff\' is a member of `struct tm\'. */
+m4trace:configure.ac:527: -1- AH_OUTPUT([HAVE_STRUCT_TM_TM_GMTOFF], [/* Define to 1 if \'tm_gmtoff\' is a member of \'struct tm\'. */
 @%:@undef HAVE_STRUCT_TM_TM_GMTOFF])
 m4trace:configure.ac:528: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRUCT_STAT_ST_BLKSIZE])
 m4trace:configure.ac:528: -1- m4_pattern_allow([^HAVE_STRUCT_STAT_ST_BLKSIZE$])
-m4trace:configure.ac:528: -1- AH_OUTPUT([HAVE_STRUCT_STAT_ST_BLKSIZE], [/* Define to 1 if `st_blksize\' is a member of `struct stat\'. */
+m4trace:configure.ac:528: -1- AH_OUTPUT([HAVE_STRUCT_STAT_ST_BLKSIZE], [/* Define to 1 if \'st_blksize\' is a member of \'struct stat\'. */
 @%:@undef HAVE_STRUCT_STAT_ST_BLKSIZE])
 m4trace:configure.ac:528: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRUCT_STAT_ST_RDEV])
 m4trace:configure.ac:528: -1- m4_pattern_allow([^HAVE_STRUCT_STAT_ST_RDEV$])
-m4trace:configure.ac:528: -1- AH_OUTPUT([HAVE_STRUCT_STAT_ST_RDEV], [/* Define to 1 if `st_rdev\' is a member of `struct stat\'. */
+m4trace:configure.ac:528: -1- AH_OUTPUT([HAVE_STRUCT_STAT_ST_RDEV], [/* Define to 1 if \'st_rdev\' is a member of \'struct stat\'. */
 @%:@undef HAVE_STRUCT_STAT_ST_RDEV])
 m4trace:configure.ac:531: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRUCT_STAT_ST_BLOCKS])
 m4trace:configure.ac:531: -1- m4_pattern_allow([^HAVE_STRUCT_STAT_ST_BLOCKS$])
-m4trace:configure.ac:531: -1- AH_OUTPUT([HAVE_STRUCT_STAT_ST_BLOCKS], [/* Define to 1 if `st_blocks\' is a member of `struct stat\'. */
+m4trace:configure.ac:531: -1- AH_OUTPUT([HAVE_STRUCT_STAT_ST_BLOCKS], [/* Define to 1 if \'st_blocks\' is a member of \'struct stat\'. */
 @%:@undef HAVE_STRUCT_STAT_ST_BLOCKS])
 m4trace:configure.ac:531: -1- AC_DEFINE_TRACE_LITERAL([HAVE_ST_BLOCKS])
 m4trace:configure.ac:531: -1- m4_pattern_allow([^HAVE_ST_BLOCKS$])
-m4trace:configure.ac:531: -1- AH_OUTPUT([HAVE_ST_BLOCKS], [/* Define to 1 if your `struct stat\' has `st_blocks\'. Deprecated, use
-   `HAVE_STRUCT_STAT_ST_BLOCKS\' instead. */
+m4trace:configure.ac:531: -1- AH_OUTPUT([HAVE_ST_BLOCKS], [/* Define to 1 if your \'struct stat\' has \'st_blocks\'. Deprecated, use
+   \'HAVE_STRUCT_STAT_ST_BLOCKS\' instead. */
 @%:@undef HAVE_ST_BLOCKS])
 m4trace:configure.ac:531: -1- AC_SUBST([LIB@&t@OBJS], ["$LIB@&t@OBJS fileblocks.$ac_objext"])
 m4trace:configure.ac:531: -1- AC_SUBST_TRACE([LIB@&t@OBJS])
@@ -1354,15 +1360,15 @@ m4trace:configure.ac:531: -1- m4_pattern_allow([^LIB@&t@OBJS$])
 m4trace:configure.ac:531: -1- AC_LIBSOURCE([fileblocks.c])
 m4trace:configure.ac:535: -1- AC_DEFINE_TRACE_LITERAL([size_t])
 m4trace:configure.ac:535: -1- m4_pattern_allow([^size_t$])
-m4trace:configure.ac:535: -1- AH_OUTPUT([size_t], [/* Define to `unsigned int\' if <sys/types.h> does not define. */
+m4trace:configure.ac:535: -1- AH_OUTPUT([size_t], [/* Define as \'unsigned int\' if <stddef.h> doesn\'t define. */
 @%:@undef size_t])
 m4trace:configure.ac:536: -1- AC_DEFINE_TRACE_LITERAL([uid_t])
 m4trace:configure.ac:536: -1- m4_pattern_allow([^uid_t$])
-m4trace:configure.ac:536: -1- AH_OUTPUT([uid_t], [/* Define to `int\' if <sys/types.h> doesn\'t define. */
+m4trace:configure.ac:536: -1- AH_OUTPUT([uid_t], [/* Define as \'int\' if <sys/types.h> doesn\'t define. */
 @%:@undef uid_t])
 m4trace:configure.ac:536: -1- AC_DEFINE_TRACE_LITERAL([gid_t])
 m4trace:configure.ac:536: -1- m4_pattern_allow([^gid_t$])
-m4trace:configure.ac:536: -1- AH_OUTPUT([gid_t], [/* Define to `int\' if <sys/types.h> doesn\'t define. */
+m4trace:configure.ac:536: -1- AH_OUTPUT([gid_t], [/* Define as \'int\' if <sys/types.h> doesn\'t define. */
 @%:@undef gid_t])
 m4trace:configure.ac:539: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SOCKADDR_STORAGE])
 m4trace:configure.ac:539: -1- m4_pattern_allow([^HAVE_SOCKADDR_STORAGE$])
@@ -1380,246 +1386,246 @@ m4trace:configure.ac:546: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FUNC_ATTRIBUTE_TARGE
 m4trace:configure.ac:546: -1- m4_pattern_allow([^HAVE_FUNC_ATTRIBUTE_TARGET$])
 m4trace:configure.ac:546: -1- AH_OUTPUT([HAVE_FUNC_ATTRIBUTE_TARGET], [/* Define to 1 if the system has the `target\' function attribute */
 @%:@undef HAVE_FUNC_ATTRIBUTE_TARGET])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_ALPHASORT], [/* Define to 1 if you have the `alphasort\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_ALPHASORT], [/* Define to 1 if you have the \'alphasort\' function. */
 @%:@undef HAVE_ALPHASORT])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_ALPHASORT])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_ALPHASORT$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_ASCTIME_R], [/* Define to 1 if you have the `asctime_r\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_ASCTIME_R], [/* Define to 1 if you have the \'asctime_r\' function. */
 @%:@undef HAVE_ASCTIME_R])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_ASCTIME_R])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_ASCTIME_R$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_CHROOT], [/* Define to 1 if you have the `chroot\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_CHROOT], [/* Define to 1 if you have the \'chroot\' function. */
 @%:@undef HAVE_CHROOT])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_CHROOT])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_CHROOT$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_CTIME_R], [/* Define to 1 if you have the `ctime_r\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_CTIME_R], [/* Define to 1 if you have the \'ctime_r\' function. */
 @%:@undef HAVE_CTIME_R])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_CTIME_R])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_CTIME_R$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_EXPLICIT_MEMSET], [/* Define to 1 if you have the `explicit_memset\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_EXPLICIT_MEMSET], [/* Define to 1 if you have the \'explicit_memset\' function. */
 @%:@undef HAVE_EXPLICIT_MEMSET])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_EXPLICIT_MEMSET])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_EXPLICIT_MEMSET$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_FDATASYNC], [/* Define to 1 if you have the `fdatasync\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_FDATASYNC], [/* Define to 1 if you have the \'fdatasync\' function. */
 @%:@undef HAVE_FDATASYNC])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FDATASYNC])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_FDATASYNC$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_FLOCK], [/* Define to 1 if you have the `flock\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_FLOCK], [/* Define to 1 if you have the \'flock\' function. */
 @%:@undef HAVE_FLOCK])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FLOCK])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_FLOCK$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_FTOK], [/* Define to 1 if you have the `ftok\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_FTOK], [/* Define to 1 if you have the \'ftok\' function. */
 @%:@undef HAVE_FTOK])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FTOK])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_FTOK$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_FUNOPEN], [/* Define to 1 if you have the `funopen\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_FUNOPEN], [/* Define to 1 if you have the \'funopen\' function. */
 @%:@undef HAVE_FUNOPEN])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FUNOPEN])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_FUNOPEN$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GAI_STRERROR], [/* Define to 1 if you have the `gai_strerror\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GAI_STRERROR], [/* Define to 1 if you have the \'gai_strerror\' function. */
 @%:@undef HAVE_GAI_STRERROR])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GAI_STRERROR])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GAI_STRERROR$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETCWD], [/* Define to 1 if you have the `getcwd\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETCWD], [/* Define to 1 if you have the \'getcwd\' function. */
 @%:@undef HAVE_GETCWD])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETCWD])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETCWD$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETLOADAVG], [/* Define to 1 if you have the `getloadavg\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETLOADAVG], [/* Define to 1 if you have the \'getloadavg\' function. */
 @%:@undef HAVE_GETLOADAVG])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETLOADAVG])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETLOADAVG$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETLOGIN], [/* Define to 1 if you have the `getlogin\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETLOGIN], [/* Define to 1 if you have the \'getlogin\' function. */
 @%:@undef HAVE_GETLOGIN])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETLOGIN])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETLOGIN$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETPROTOBYNAME], [/* Define to 1 if you have the `getprotobyname\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETPROTOBYNAME], [/* Define to 1 if you have the \'getprotobyname\' function. */
 @%:@undef HAVE_GETPROTOBYNAME])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETPROTOBYNAME])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETPROTOBYNAME$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETPROTOBYNUMBER], [/* Define to 1 if you have the `getprotobynumber\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETPROTOBYNUMBER], [/* Define to 1 if you have the \'getprotobynumber\' function. */
 @%:@undef HAVE_GETPROTOBYNUMBER])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETPROTOBYNUMBER])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETPROTOBYNUMBER$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETSERVBYNAME], [/* Define to 1 if you have the `getservbyname\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETSERVBYNAME], [/* Define to 1 if you have the \'getservbyname\' function. */
 @%:@undef HAVE_GETSERVBYNAME])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETSERVBYNAME])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETSERVBYNAME$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETSERVBYPORT], [/* Define to 1 if you have the `getservbyport\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETSERVBYPORT], [/* Define to 1 if you have the \'getservbyport\' function. */
 @%:@undef HAVE_GETSERVBYPORT])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETSERVBYPORT])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETSERVBYPORT$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETRUSAGE], [/* Define to 1 if you have the `getrusage\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETRUSAGE], [/* Define to 1 if you have the \'getrusage\' function. */
 @%:@undef HAVE_GETRUSAGE])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETRUSAGE])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETRUSAGE$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETTIMEOFDAY], [/* Define to 1 if you have the `gettimeofday\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETTIMEOFDAY], [/* Define to 1 if you have the \'gettimeofday\' function. */
 @%:@undef HAVE_GETTIMEOFDAY])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETTIMEOFDAY])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETTIMEOFDAY$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GMTIME_R], [/* Define to 1 if you have the `gmtime_r\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GMTIME_R], [/* Define to 1 if you have the \'gmtime_r\' function. */
 @%:@undef HAVE_GMTIME_R])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GMTIME_R])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GMTIME_R$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETPWNAM_R], [/* Define to 1 if you have the `getpwnam_r\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETPWNAM_R], [/* Define to 1 if you have the \'getpwnam_r\' function. */
 @%:@undef HAVE_GETPWNAM_R])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETPWNAM_R])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETPWNAM_R$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETGRNAM_R], [/* Define to 1 if you have the `getgrnam_r\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETGRNAM_R], [/* Define to 1 if you have the \'getgrnam_r\' function. */
 @%:@undef HAVE_GETGRNAM_R])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETGRNAM_R])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETGRNAM_R$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETPWUID_R], [/* Define to 1 if you have the `getpwuid_r\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETPWUID_R], [/* Define to 1 if you have the \'getpwuid_r\' function. */
 @%:@undef HAVE_GETPWUID_R])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETPWUID_R])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETPWUID_R$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETWD], [/* Define to 1 if you have the `getwd\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GETWD], [/* Define to 1 if you have the \'getwd\' function. */
 @%:@undef HAVE_GETWD])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETWD])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GETWD$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GLOB], [/* Define to 1 if you have the `glob\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_GLOB], [/* Define to 1 if you have the \'glob\' function. */
 @%:@undef HAVE_GLOB])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GLOB])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_GLOB$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_INET_NTOA], [/* Define to 1 if you have the `inet_ntoa\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_INET_NTOA], [/* Define to 1 if you have the \'inet_ntoa\' function. */
 @%:@undef HAVE_INET_NTOA])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_INET_NTOA])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_INET_NTOA$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_INET_NTOP], [/* Define to 1 if you have the `inet_ntop\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_INET_NTOP], [/* Define to 1 if you have the \'inet_ntop\' function. */
 @%:@undef HAVE_INET_NTOP])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_INET_NTOP])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_INET_NTOP$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_INET_PTON], [/* Define to 1 if you have the `inet_pton\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_INET_PTON], [/* Define to 1 if you have the \'inet_pton\' function. */
 @%:@undef HAVE_INET_PTON])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_INET_PTON])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_INET_PTON$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_LOCALTIME_R], [/* Define to 1 if you have the `localtime_r\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_LOCALTIME_R], [/* Define to 1 if you have the \'localtime_r\' function. */
 @%:@undef HAVE_LOCALTIME_R])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LOCALTIME_R])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_LOCALTIME_R$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_LCHOWN], [/* Define to 1 if you have the `lchown\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_LCHOWN], [/* Define to 1 if you have the \'lchown\' function. */
 @%:@undef HAVE_LCHOWN])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LCHOWN])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_LCHOWN$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_MEMMOVE], [/* Define to 1 if you have the `memmove\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_MEMMOVE], [/* Define to 1 if you have the \'memmove\' function. */
 @%:@undef HAVE_MEMMOVE])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_MEMMOVE])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_MEMMOVE$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_MKSTEMP], [/* Define to 1 if you have the `mkstemp\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_MKSTEMP], [/* Define to 1 if you have the \'mkstemp\' function. */
 @%:@undef HAVE_MKSTEMP])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_MKSTEMP])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_MKSTEMP$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_MMAP], [/* Define to 1 if you have the `mmap\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_MMAP], [/* Define to 1 if you have the \'mmap\' function. */
 @%:@undef HAVE_MMAP])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_MMAP])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_MMAP$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_NICE], [/* Define to 1 if you have the `nice\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_NICE], [/* Define to 1 if you have the \'nice\' function. */
 @%:@undef HAVE_NICE])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_NICE])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_NICE$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_NL_LANGINFO], [/* Define to 1 if you have the `nl_langinfo\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_NL_LANGINFO], [/* Define to 1 if you have the \'nl_langinfo\' function. */
 @%:@undef HAVE_NL_LANGINFO])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_NL_LANGINFO])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_NL_LANGINFO$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_POLL], [/* Define to 1 if you have the `poll\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_POLL], [/* Define to 1 if you have the \'poll\' function. */
 @%:@undef HAVE_POLL])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_POLL])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_POLL$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_PUTENV], [/* Define to 1 if you have the `putenv\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_PUTENV], [/* Define to 1 if you have the \'putenv\' function. */
 @%:@undef HAVE_PUTENV])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_PUTENV])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_PUTENV$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SCANDIR], [/* Define to 1 if you have the `scandir\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SCANDIR], [/* Define to 1 if you have the \'scandir\' function. */
 @%:@undef HAVE_SCANDIR])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SCANDIR])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_SCANDIR$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SETITIMER], [/* Define to 1 if you have the `setitimer\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SETITIMER], [/* Define to 1 if you have the \'setitimer\' function. */
 @%:@undef HAVE_SETITIMER])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETITIMER])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_SETITIMER$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SETENV], [/* Define to 1 if you have the `setenv\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SETENV], [/* Define to 1 if you have the \'setenv\' function. */
 @%:@undef HAVE_SETENV])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETENV])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_SETENV$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SHUTDOWN], [/* Define to 1 if you have the `shutdown\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SHUTDOWN], [/* Define to 1 if you have the \'shutdown\' function. */
 @%:@undef HAVE_SHUTDOWN])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SHUTDOWN])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_SHUTDOWN$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SIGPROCMASK], [/* Define to 1 if you have the `sigprocmask\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SIGPROCMASK], [/* Define to 1 if you have the \'sigprocmask\' function. */
 @%:@undef HAVE_SIGPROCMASK])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SIGPROCMASK])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_SIGPROCMASK$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STATFS], [/* Define to 1 if you have the `statfs\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STATFS], [/* Define to 1 if you have the \'statfs\' function. */
 @%:@undef HAVE_STATFS])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STATFS])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_STATFS$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STATVFS], [/* Define to 1 if you have the `statvfs\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STATVFS], [/* Define to 1 if you have the \'statvfs\' function. */
 @%:@undef HAVE_STATVFS])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STATVFS])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_STATVFS$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STD_SYSLOG], [/* Define to 1 if you have the `std_syslog\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STD_SYSLOG], [/* Define to 1 if you have the \'std_syslog\' function. */
 @%:@undef HAVE_STD_SYSLOG])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STD_SYSLOG])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_STD_SYSLOG$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STRCASECMP], [/* Define to 1 if you have the `strcasecmp\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STRCASECMP], [/* Define to 1 if you have the \'strcasecmp\' function. */
 @%:@undef HAVE_STRCASECMP])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRCASECMP])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_STRCASECMP$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STRNLEN], [/* Define to 1 if you have the `strnlen\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STRNLEN], [/* Define to 1 if you have the \'strnlen\' function. */
 @%:@undef HAVE_STRNLEN])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRNLEN])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_STRNLEN$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STRPTIME], [/* Define to 1 if you have the `strptime\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STRPTIME], [/* Define to 1 if you have the \'strptime\' function. */
 @%:@undef HAVE_STRPTIME])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRPTIME])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_STRPTIME$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STRTOK_R], [/* Define to 1 if you have the `strtok_r\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_STRTOK_R], [/* Define to 1 if you have the \'strtok_r\' function. */
 @%:@undef HAVE_STRTOK_R])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRTOK_R])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_STRTOK_R$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SYMLINK], [/* Define to 1 if you have the `symlink\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_SYMLINK], [/* Define to 1 if you have the \'symlink\' function. */
 @%:@undef HAVE_SYMLINK])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SYMLINK])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_SYMLINK$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_TZSET], [/* Define to 1 if you have the `tzset\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_TZSET], [/* Define to 1 if you have the \'tzset\' function. */
 @%:@undef HAVE_TZSET])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_TZSET])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_TZSET$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_UNSETENV], [/* Define to 1 if you have the `unsetenv\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_UNSETENV], [/* Define to 1 if you have the \'unsetenv\' function. */
 @%:@undef HAVE_UNSETENV])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_UNSETENV])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_UNSETENV$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_USLEEP], [/* Define to 1 if you have the `usleep\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_USLEEP], [/* Define to 1 if you have the \'usleep\' function. */
 @%:@undef HAVE_USLEEP])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_USLEEP])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_USLEEP$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_UTIME], [/* Define to 1 if you have the `utime\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_UTIME], [/* Define to 1 if you have the \'utime\' function. */
 @%:@undef HAVE_UTIME])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_UTIME])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_UTIME$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_VASPRINTF], [/* Define to 1 if you have the `vasprintf\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_VASPRINTF], [/* Define to 1 if you have the \'vasprintf\' function. */
 @%:@undef HAVE_VASPRINTF])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_VASPRINTF])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_VASPRINTF$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_ASPRINTF], [/* Define to 1 if you have the `asprintf\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_ASPRINTF], [/* Define to 1 if you have the \'asprintf\' function. */
 @%:@undef HAVE_ASPRINTF])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_ASPRINTF])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_ASPRINTF$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_NANOSLEEP], [/* Define to 1 if you have the `nanosleep\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_NANOSLEEP], [/* Define to 1 if you have the \'nanosleep\' function. */
 @%:@undef HAVE_NANOSLEEP])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_NANOSLEEP])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_NANOSLEEP$])
-m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_MEMMEM], [/* Define to 1 if you have the `memmem\' function. */
+m4trace:configure.ac:561: -1- AH_OUTPUT([HAVE_MEMMEM], [/* Define to 1 if you have the \'memmem\' function. */
 @%:@undef HAVE_MEMMEM])
 m4trace:configure.ac:561: -1- AC_DEFINE_TRACE_LITERAL([HAVE_MEMMEM])
 m4trace:configure.ac:561: -1- m4_pattern_allow([^HAVE_MEMMEM$])
 m4trace:configure.ac:623: -1- AC_DEFINE_TRACE_LITERAL([HAVE_DECL_STRERROR_R])
 m4trace:configure.ac:623: -1- m4_pattern_allow([^HAVE_DECL_STRERROR_R$])
-m4trace:configure.ac:623: -1- AH_OUTPUT([HAVE_DECL_STRERROR_R], [/* Define to 1 if you have the declaration of `strerror_r\', and to 0 if you
+m4trace:configure.ac:623: -1- AH_OUTPUT([HAVE_DECL_STRERROR_R], [/* Define to 1 if you have the declaration of \'strerror_r\', and to 0 if you
    don\'t. */
 @%:@undef HAVE_DECL_STRERROR_R])
 m4trace:configure.ac:623: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRERROR_R])
 m4trace:configure.ac:623: -1- m4_pattern_allow([^HAVE_STRERROR_R$])
-m4trace:configure.ac:623: -1- AH_OUTPUT([HAVE_STRERROR_R], [/* Define if you have `strerror_r\'. */
+m4trace:configure.ac:623: -1- AH_OUTPUT([HAVE_STRERROR_R], [/* Define if you have \'strerror_r\'. */
 @%:@undef HAVE_STRERROR_R])
 m4trace:configure.ac:623: -1- AC_DEFINE_TRACE_LITERAL([STRERROR_R_CHAR_P])
 m4trace:configure.ac:623: -1- m4_pattern_allow([^STRERROR_R_CHAR_P$])
@@ -1661,7 +1667,7 @@ m4trace:configure.ac:689: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETADDRINFO])
 m4trace:configure.ac:689: -1- m4_pattern_allow([^HAVE_GETADDRINFO$])
 m4trace:configure.ac:689: -1- AH_OUTPUT([HAVE_GETADDRINFO], [/* Define if you have the getaddrinfo function */
 @%:@undef HAVE_GETADDRINFO])
-m4trace:configure.ac:692: -1- AH_OUTPUT([HAVE_STRLCAT], [/* Define to 1 if you have the `strlcat\' function. */
+m4trace:configure.ac:692: -1- AH_OUTPUT([HAVE_STRLCAT], [/* Define to 1 if you have the \'strlcat\' function. */
 @%:@undef HAVE_STRLCAT])
 m4trace:configure.ac:692: -1- AC_LIBSOURCE([strlcat.c])
 m4trace:configure.ac:692: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRLCAT])
@@ -1669,7 +1675,7 @@ m4trace:configure.ac:692: -1- m4_pattern_allow([^HAVE_STRLCAT$])
 m4trace:configure.ac:692: -1- AC_SUBST([LIB@&t@OBJS], ["$LIB@&t@OBJS strlcat.$ac_objext"])
 m4trace:configure.ac:692: -1- AC_SUBST_TRACE([LIB@&t@OBJS])
 m4trace:configure.ac:692: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:692: -1- AH_OUTPUT([HAVE_STRLCPY], [/* Define to 1 if you have the `strlcpy\' function. */
+m4trace:configure.ac:692: -1- AH_OUTPUT([HAVE_STRLCPY], [/* Define to 1 if you have the \'strlcpy\' function. */
 @%:@undef HAVE_STRLCPY])
 m4trace:configure.ac:692: -1- AC_LIBSOURCE([strlcpy.c])
 m4trace:configure.ac:692: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRLCPY])
@@ -1677,7 +1683,7 @@ m4trace:configure.ac:692: -1- m4_pattern_allow([^HAVE_STRLCPY$])
 m4trace:configure.ac:692: -1- AC_SUBST([LIB@&t@OBJS], ["$LIB@&t@OBJS strlcpy.$ac_objext"])
 m4trace:configure.ac:692: -1- AC_SUBST_TRACE([LIB@&t@OBJS])
 m4trace:configure.ac:692: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:692: -1- AH_OUTPUT([HAVE_EXPLICIT_BZERO], [/* Define to 1 if you have the `explicit_bzero\' function. */
+m4trace:configure.ac:692: -1- AH_OUTPUT([HAVE_EXPLICIT_BZERO], [/* Define to 1 if you have the \'explicit_bzero\' function. */
 @%:@undef HAVE_EXPLICIT_BZERO])
 m4trace:configure.ac:692: -1- AC_LIBSOURCE([explicit_bzero.c])
 m4trace:configure.ac:692: -1- AC_DEFINE_TRACE_LITERAL([HAVE_EXPLICIT_BZERO])
@@ -1685,7 +1691,7 @@ m4trace:configure.ac:692: -1- m4_pattern_allow([^HAVE_EXPLICIT_BZERO$])
 m4trace:configure.ac:692: -1- AC_SUBST([LIB@&t@OBJS], ["$LIB@&t@OBJS explicit_bzero.$ac_objext"])
 m4trace:configure.ac:692: -1- AC_SUBST_TRACE([LIB@&t@OBJS])
 m4trace:configure.ac:692: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:692: -1- AH_OUTPUT([HAVE_GETOPT], [/* Define to 1 if you have the `getopt\' function. */
+m4trace:configure.ac:692: -1- AH_OUTPUT([HAVE_GETOPT], [/* Define to 1 if you have the \'getopt\' function. */
 @%:@undef HAVE_GETOPT])
 m4trace:configure.ac:692: -1- AC_LIBSOURCE([getopt.c])
 m4trace:configure.ac:692: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETOPT])
@@ -1817,11 +1823,11 @@ m4trace:ext/date/config0.m4:2: -1- AH_OUTPUT([HAVE_IO_H], [/* Define to 1 if you
 @%:@undef HAVE_IO_H])
 m4trace:ext/date/config0.m4:2: -1- AC_DEFINE_TRACE_LITERAL([HAVE_IO_H])
 m4trace:ext/date/config0.m4:2: -1- m4_pattern_allow([^HAVE_IO_H$])
-m4trace:ext/date/config0.m4:5: -1- AH_OUTPUT([HAVE_STRTOLL], [/* Define to 1 if you have the `strtoll\' function. */
+m4trace:ext/date/config0.m4:5: -1- AH_OUTPUT([HAVE_STRTOLL], [/* Define to 1 if you have the \'strtoll\' function. */
 @%:@undef HAVE_STRTOLL])
 m4trace:ext/date/config0.m4:5: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRTOLL])
 m4trace:ext/date/config0.m4:5: -1- m4_pattern_allow([^HAVE_STRTOLL$])
-m4trace:ext/date/config0.m4:5: -1- AH_OUTPUT([HAVE_ATOLL], [/* Define to 1 if you have the `atoll\' function. */
+m4trace:ext/date/config0.m4:5: -1- AH_OUTPUT([HAVE_ATOLL], [/* Define to 1 if you have the \'atoll\' function. */
 @%:@undef HAVE_ATOLL])
 m4trace:ext/date/config0.m4:5: -1- AC_DEFINE_TRACE_LITERAL([HAVE_ATOLL])
 m4trace:ext/date/config0.m4:5: -1- m4_pattern_allow([^HAVE_ATOLL$])
@@ -1873,7 +1879,7 @@ m4trace:ext/openssl/config0.m4:31: -1- AC_DEFINE_TRACE_LITERAL([HAVE_OPENSSL_EXT
 m4trace:ext/openssl/config0.m4:31: -1- m4_pattern_allow([^HAVE_OPENSSL_EXT$])
 m4trace:ext/openssl/config0.m4:31: -1- AH_OUTPUT([HAVE_OPENSSL_EXT], [/* */
 @%:@undef HAVE_OPENSSL_EXT])
-m4trace:ext/openssl/config0.m4:38: -1- AH_OUTPUT([HAVE_RAND_EGD], [/* Define to 1 if you have the `RAND_egd\' function. */
+m4trace:ext/openssl/config0.m4:38: -1- AH_OUTPUT([HAVE_RAND_EGD], [/* Define to 1 if you have the \'RAND_egd\' function. */
 @%:@undef HAVE_RAND_EGD])
 m4trace:ext/openssl/config0.m4:38: -1- AC_DEFINE_TRACE_LITERAL([HAVE_RAND_EGD])
 m4trace:ext/openssl/config0.m4:38: -1- m4_pattern_allow([^HAVE_RAND_EGD$])
@@ -2245,7 +2251,7 @@ m4trace:ext/ffi/config.m4:12: -1- AH_OUTPUT([HAVE_FFI], [/* Have ffi support */
 @%:@undef HAVE_FFI])
 m4trace:ext/ffi/config.m4:14: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LONG_DOUBLE])
 m4trace:ext/ffi/config.m4:14: -1- m4_pattern_allow([^HAVE_LONG_DOUBLE$])
-m4trace:ext/ffi/config.m4:14: -1- AH_OUTPUT([HAVE_LONG_DOUBLE], [/* Define to 1 if the system has the type `long double\'. */
+m4trace:ext/ffi/config.m4:14: -1- AH_OUTPUT([HAVE_LONG_DOUBLE], [/* Define to 1 if the system has the type \'long double\'. */
 @%:@undef HAVE_LONG_DOUBLE])
 m4trace:ext/ffi/config.m4:26: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FFI_FASTCALL])
 m4trace:ext/ffi/config.m4:26: -1- m4_pattern_allow([^HAVE_FFI_FASTCALL$])
@@ -2284,11 +2290,11 @@ m4trace:ext/fileinfo/config.m4:52: -1- AC_DEFINE_TRACE_LITERAL([COMPILE_DL_FILEI
 m4trace:ext/fileinfo/config.m4:52: -1- m4_pattern_allow([^COMPILE_DL_FILEINFO$])
 m4trace:ext/fileinfo/config.m4:52: -1- AH_OUTPUT([COMPILE_DL_FILEINFO], [/* Whether to build fileinfo as dynamic module */
 @%:@undef COMPILE_DL_FILEINFO])
-m4trace:ext/fileinfo/config.m4:55: -1- AH_OUTPUT([HAVE_UTIMES], [/* Define to 1 if you have the `utimes\' function. */
+m4trace:ext/fileinfo/config.m4:55: -1- AH_OUTPUT([HAVE_UTIMES], [/* Define to 1 if you have the \'utimes\' function. */
 @%:@undef HAVE_UTIMES])
 m4trace:ext/fileinfo/config.m4:55: -1- AC_DEFINE_TRACE_LITERAL([HAVE_UTIMES])
 m4trace:ext/fileinfo/config.m4:55: -1- m4_pattern_allow([^HAVE_UTIMES$])
-m4trace:ext/fileinfo/config.m4:55: -1- AH_OUTPUT([HAVE_STRNDUP], [/* Define to 1 if you have the `strndup\' function. */
+m4trace:ext/fileinfo/config.m4:55: -1- AH_OUTPUT([HAVE_STRNDUP], [/* Define to 1 if you have the \'strndup\' function. */
 @%:@undef HAVE_STRNDUP])
 m4trace:ext/fileinfo/config.m4:55: -1- AC_DEFINE_TRACE_LITERAL([HAVE_STRNDUP])
 m4trace:ext/fileinfo/config.m4:55: -1- m4_pattern_allow([^HAVE_STRNDUP$])
@@ -2317,11 +2323,11 @@ m4trace:ext/ftp/config.m4:24: -1- m4_pattern_allow([^HAVE_FTP_SSL$])
 m4trace:ext/ftp/config.m4:24: -1- AH_OUTPUT([HAVE_FTP_SSL], [/* Whether FTP over SSL is supported */
 @%:@undef HAVE_FTP_SSL])
 m4trace:configure.ac:1070: -1- sinclude([ext/gd/config.m4])
-m4trace:ext/gd/config.m4:172: -1- AH_OUTPUT([HAVE_FABSF], [/* Define to 1 if you have the `fabsf\' function. */
+m4trace:ext/gd/config.m4:172: -1- AH_OUTPUT([HAVE_FABSF], [/* Define to 1 if you have the \'fabsf\' function. */
 @%:@undef HAVE_FABSF])
 m4trace:ext/gd/config.m4:172: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FABSF])
 m4trace:ext/gd/config.m4:172: -1- m4_pattern_allow([^HAVE_FABSF$])
-m4trace:ext/gd/config.m4:172: -1- AH_OUTPUT([HAVE_FLOORF], [/* Define to 1 if you have the `floorf\' function. */
+m4trace:ext/gd/config.m4:172: -1- AH_OUTPUT([HAVE_FLOORF], [/* Define to 1 if you have the \'floorf\' function. */
 @%:@undef HAVE_FLOORF])
 m4trace:ext/gd/config.m4:172: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FLOORF])
 m4trace:ext/gd/config.m4:172: -1- m4_pattern_allow([^HAVE_FLOORF$])
@@ -2538,7 +2544,7 @@ m4trace:ext/hash/config.m4:16: -1- AH_OUTPUT([HAVE_SLOW_HASH3], [/* Define is ha
 @%:@undef HAVE_SLOW_HASH3])
 m4trace:ext/hash/config.m4:19: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_LONG])
 m4trace:ext/hash/config.m4:19: -1- m4_pattern_allow([^SIZEOF_LONG$])
-m4trace:ext/hash/config.m4:19: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of `long\', as computed by sizeof. */
+m4trace:ext/hash/config.m4:19: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of \'long\', as computed by sizeof. */
 @%:@undef SIZEOF_LONG])
 m4trace:ext/hash/config.m4:50: -1- AC_DEFINE_TRACE_LITERAL([COMPILE_DL_HASH])
 m4trace:ext/hash/config.m4:50: -1- m4_pattern_allow([^COMPILE_DL_HASH$])
@@ -2754,11 +2760,11 @@ m4trace:ext/ldap/config.m4:54: -1- AH_OUTPUT([COMPILE_DL_LDAP], [/* Whether to b
 @%:@undef COMPILE_DL_LDAP])
 m4trace:ext/ldap/config.m4:58: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_LONG])
 m4trace:ext/ldap/config.m4:58: -1- m4_pattern_allow([^SIZEOF_LONG$])
-m4trace:ext/ldap/config.m4:58: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of `long\', as computed by sizeof. */
+m4trace:ext/ldap/config.m4:58: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of \'long\', as computed by sizeof. */
 @%:@undef SIZEOF_LONG])
 m4trace:ext/ldap/config.m4:61: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_LONG])
 m4trace:ext/ldap/config.m4:61: -1- m4_pattern_allow([^SIZEOF_LONG$])
-m4trace:ext/ldap/config.m4:61: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of `long\', as computed by sizeof. */
+m4trace:ext/ldap/config.m4:61: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of \'long\', as computed by sizeof. */
 @%:@undef SIZEOF_LONG])
 m4trace:ext/ldap/config.m4:80: -1- AC_DEFINE_TRACE_LITERAL([HAVE_ORALDAP])
 m4trace:ext/ldap/config.m4:80: -1- m4_pattern_allow([^HAVE_ORALDAP$])
@@ -2780,43 +2786,43 @@ m4trace:ext/ldap/config.m4:109: -1- AC_DEFINE_TRACE_LITERAL([HAVE_3ARG_SETREBIND
 m4trace:ext/ldap/config.m4:109: -1- m4_pattern_allow([^HAVE_3ARG_SETREBINDPROC$])
 m4trace:ext/ldap/config.m4:109: -1- AH_OUTPUT([HAVE_3ARG_SETREBINDPROC], [/* Whether 3 arg set_rebind_proc() */
 @%:@undef HAVE_3ARG_SETREBINDPROC])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_PARSE_RESULT], [/* Define to 1 if you have the `ldap_parse_result\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_PARSE_RESULT], [/* Define to 1 if you have the \'ldap_parse_result\' function. */
 @%:@undef HAVE_LDAP_PARSE_RESULT])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_PARSE_RESULT])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_PARSE_RESULT$])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_PARSE_REFERENCE], [/* Define to 1 if you have the `ldap_parse_reference\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_PARSE_REFERENCE], [/* Define to 1 if you have the \'ldap_parse_reference\' function. */
 @%:@undef HAVE_LDAP_PARSE_REFERENCE])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_PARSE_REFERENCE])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_PARSE_REFERENCE$])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_START_TLS_S], [/* Define to 1 if you have the `ldap_start_tls_s\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_START_TLS_S], [/* Define to 1 if you have the \'ldap_start_tls_s\' function. */
 @%:@undef HAVE_LDAP_START_TLS_S])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_START_TLS_S])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_START_TLS_S$])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_CONTROL_FIND], [/* Define to 1 if you have the `ldap_control_find\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_CONTROL_FIND], [/* Define to 1 if you have the \'ldap_control_find\' function. */
 @%:@undef HAVE_LDAP_CONTROL_FIND])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_CONTROL_FIND])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_CONTROL_FIND$])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_PARSE_EXTENDED_RESULT], [/* Define to 1 if you have the `ldap_parse_extended_result\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_PARSE_EXTENDED_RESULT], [/* Define to 1 if you have the \'ldap_parse_extended_result\' function. */
 @%:@undef HAVE_LDAP_PARSE_EXTENDED_RESULT])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_PARSE_EXTENDED_RESULT])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_PARSE_EXTENDED_RESULT$])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_EXTENDED_OPERATION], [/* Define to 1 if you have the `ldap_extended_operation\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_EXTENDED_OPERATION], [/* Define to 1 if you have the \'ldap_extended_operation\' function. */
 @%:@undef HAVE_LDAP_EXTENDED_OPERATION])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_EXTENDED_OPERATION])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_EXTENDED_OPERATION$])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_EXTENDED_OPERATION_S], [/* Define to 1 if you have the `ldap_extended_operation_s\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_EXTENDED_OPERATION_S], [/* Define to 1 if you have the \'ldap_extended_operation_s\' function. */
 @%:@undef HAVE_LDAP_EXTENDED_OPERATION_S])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_EXTENDED_OPERATION_S])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_EXTENDED_OPERATION_S$])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_PASSWD], [/* Define to 1 if you have the `ldap_passwd\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_PASSWD], [/* Define to 1 if you have the \'ldap_passwd\' function. */
 @%:@undef HAVE_LDAP_PASSWD])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_PASSWD])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_PASSWD$])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_WHOAMI_S], [/* Define to 1 if you have the `ldap_whoami_s\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_WHOAMI_S], [/* Define to 1 if you have the \'ldap_whoami_s\' function. */
 @%:@undef HAVE_LDAP_WHOAMI_S])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_WHOAMI_S])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_WHOAMI_S$])
-m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_REFRESH_S], [/* Define to 1 if you have the `ldap_refresh_s\' function. */
+m4trace:ext/ldap/config.m4:114: -1- AH_OUTPUT([HAVE_LDAP_REFRESH_S], [/* Define to 1 if you have the \'ldap_refresh_s\' function. */
 @%:@undef HAVE_LDAP_REFRESH_S])
 m4trace:ext/ldap/config.m4:114: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LDAP_REFRESH_S])
 m4trace:ext/ldap/config.m4:114: -1- m4_pattern_allow([^HAVE_LDAP_REFRESH_S$])
@@ -2885,7 +2891,7 @@ m4trace:ext/oci8/config.m4:237: -1- AH_OUTPUT([HAVE_OCI8_DTRACE], [/* Defined to
 @%:@undef HAVE_OCI8_DTRACE])
 m4trace:ext/oci8/config.m4:247: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_LONG])
 m4trace:ext/oci8/config.m4:247: -1- m4_pattern_allow([^SIZEOF_LONG$])
-m4trace:ext/oci8/config.m4:247: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of `long\', as computed by sizeof. */
+m4trace:ext/oci8/config.m4:247: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of \'long\', as computed by sizeof. */
 @%:@undef SIZEOF_LONG])
 m4trace:ext/oci8/config.m4:344: -1- AC_DEFINE_TRACE_LITERAL([COMPILE_DL_OCI8])
 m4trace:ext/oci8/config.m4:344: -1- m4_pattern_allow([^COMPILE_DL_OCI8$])
@@ -3074,7 +3080,7 @@ m4trace:ext/opcache/config.m4:94: -1- AC_DEFINE_TRACE_LITERAL([HAVE_OPROFILE])
 m4trace:ext/opcache/config.m4:94: -1- m4_pattern_allow([^HAVE_OPROFILE$])
 m4trace:ext/opcache/config.m4:94: -1- AH_OUTPUT([HAVE_OPROFILE], [/* */
 @%:@undef HAVE_OPROFILE])
-m4trace:ext/opcache/config.m4:109: -1- AH_OUTPUT([HAVE_MPROTECT], [/* Define to 1 if you have the `mprotect\' function. */
+m4trace:ext/opcache/config.m4:109: -1- AH_OUTPUT([HAVE_MPROTECT], [/* Define to 1 if you have the \'mprotect\' function. */
 @%:@undef HAVE_MPROTECT])
 m4trace:ext/opcache/config.m4:109: -1- AC_DEFINE_TRACE_LITERAL([HAVE_MPROTECT])
 m4trace:ext/opcache/config.m4:109: -1- m4_pattern_allow([^HAVE_MPROTECT$])
@@ -3111,47 +3117,47 @@ m4trace:ext/opcache/config.m4:316: -1- m4_pattern_allow([^COMPILE_DL_OPCACHE$])
 m4trace:ext/opcache/config.m4:316: -1- AH_OUTPUT([COMPILE_DL_OPCACHE], [/* Whether to build opcache as dynamic module */
 @%:@undef COMPILE_DL_OPCACHE])
 m4trace:configure.ac:1070: -1- sinclude([ext/pcntl/config.m4])
-m4trace:ext/pcntl/config.m4:7: -1- AH_OUTPUT([HAVE_FORK], [/* Define to 1 if you have the `fork\' function. */
+m4trace:ext/pcntl/config.m4:7: -1- AH_OUTPUT([HAVE_FORK], [/* Define to 1 if you have the \'fork\' function. */
 @%:@undef HAVE_FORK])
 m4trace:ext/pcntl/config.m4:7: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FORK])
 m4trace:ext/pcntl/config.m4:7: -1- m4_pattern_allow([^HAVE_FORK$])
-m4trace:ext/pcntl/config.m4:8: -1- AH_OUTPUT([HAVE_WAITPID], [/* Define to 1 if you have the `waitpid\' function. */
+m4trace:ext/pcntl/config.m4:8: -1- AH_OUTPUT([HAVE_WAITPID], [/* Define to 1 if you have the \'waitpid\' function. */
 @%:@undef HAVE_WAITPID])
 m4trace:ext/pcntl/config.m4:8: -1- AC_DEFINE_TRACE_LITERAL([HAVE_WAITPID])
 m4trace:ext/pcntl/config.m4:8: -1- m4_pattern_allow([^HAVE_WAITPID$])
-m4trace:ext/pcntl/config.m4:9: -1- AH_OUTPUT([HAVE_SIGACTION], [/* Define to 1 if you have the `sigaction\' function. */
+m4trace:ext/pcntl/config.m4:9: -1- AH_OUTPUT([HAVE_SIGACTION], [/* Define to 1 if you have the \'sigaction\' function. */
 @%:@undef HAVE_SIGACTION])
 m4trace:ext/pcntl/config.m4:9: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SIGACTION])
 m4trace:ext/pcntl/config.m4:9: -1- m4_pattern_allow([^HAVE_SIGACTION$])
-m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_GETPRIORITY], [/* Define to 1 if you have the `getpriority\' function. */
+m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_GETPRIORITY], [/* Define to 1 if you have the \'getpriority\' function. */
 @%:@undef HAVE_GETPRIORITY])
 m4trace:ext/pcntl/config.m4:10: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETPRIORITY])
 m4trace:ext/pcntl/config.m4:10: -1- m4_pattern_allow([^HAVE_GETPRIORITY$])
-m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_SETPRIORITY], [/* Define to 1 if you have the `setpriority\' function. */
+m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_SETPRIORITY], [/* Define to 1 if you have the \'setpriority\' function. */
 @%:@undef HAVE_SETPRIORITY])
 m4trace:ext/pcntl/config.m4:10: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETPRIORITY])
 m4trace:ext/pcntl/config.m4:10: -1- m4_pattern_allow([^HAVE_SETPRIORITY$])
-m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_WAIT3], [/* Define to 1 if you have the `wait3\' function. */
+m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_WAIT3], [/* Define to 1 if you have the \'wait3\' function. */
 @%:@undef HAVE_WAIT3])
 m4trace:ext/pcntl/config.m4:10: -1- AC_DEFINE_TRACE_LITERAL([HAVE_WAIT3])
 m4trace:ext/pcntl/config.m4:10: -1- m4_pattern_allow([^HAVE_WAIT3$])
-m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_WAIT4], [/* Define to 1 if you have the `wait4\' function. */
+m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_WAIT4], [/* Define to 1 if you have the \'wait4\' function. */
 @%:@undef HAVE_WAIT4])
 m4trace:ext/pcntl/config.m4:10: -1- AC_DEFINE_TRACE_LITERAL([HAVE_WAIT4])
 m4trace:ext/pcntl/config.m4:10: -1- m4_pattern_allow([^HAVE_WAIT4$])
-m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_SIGWAITINFO], [/* Define to 1 if you have the `sigwaitinfo\' function. */
+m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_SIGWAITINFO], [/* Define to 1 if you have the \'sigwaitinfo\' function. */
 @%:@undef HAVE_SIGWAITINFO])
 m4trace:ext/pcntl/config.m4:10: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SIGWAITINFO])
 m4trace:ext/pcntl/config.m4:10: -1- m4_pattern_allow([^HAVE_SIGWAITINFO$])
-m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_SIGTIMEDWAIT], [/* Define to 1 if you have the `sigtimedwait\' function. */
+m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_SIGTIMEDWAIT], [/* Define to 1 if you have the \'sigtimedwait\' function. */
 @%:@undef HAVE_SIGTIMEDWAIT])
 m4trace:ext/pcntl/config.m4:10: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SIGTIMEDWAIT])
 m4trace:ext/pcntl/config.m4:10: -1- m4_pattern_allow([^HAVE_SIGTIMEDWAIT$])
-m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_UNSHARE], [/* Define to 1 if you have the `unshare\' function. */
+m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_UNSHARE], [/* Define to 1 if you have the \'unshare\' function. */
 @%:@undef HAVE_UNSHARE])
 m4trace:ext/pcntl/config.m4:10: -1- AC_DEFINE_TRACE_LITERAL([HAVE_UNSHARE])
 m4trace:ext/pcntl/config.m4:10: -1- m4_pattern_allow([^HAVE_UNSHARE$])
-m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_RFORK], [/* Define to 1 if you have the `rfork\' function. */
+m4trace:ext/pcntl/config.m4:10: -1- AH_OUTPUT([HAVE_RFORK], [/* Define to 1 if you have the \'rfork\' function. */
 @%:@undef HAVE_RFORK])
 m4trace:ext/pcntl/config.m4:10: -1- AC_DEFINE_TRACE_LITERAL([HAVE_RFORK])
 m4trace:ext/pcntl/config.m4:10: -1- m4_pattern_allow([^HAVE_RFORK$])
@@ -3219,11 +3225,11 @@ m4trace:ext/pdo_mysql/config.m4:113: -1- m4_pattern_allow([^PDO_MYSQL_MODULE_TYP
 m4trace:configure.ac:1070: -1- sinclude([ext/pdo_oci/config.m4])
 m4trace:ext/pdo_oci/config.m4:86: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_LONG])
 m4trace:ext/pdo_oci/config.m4:86: -1- m4_pattern_allow([^SIZEOF_LONG$])
-m4trace:ext/pdo_oci/config.m4:86: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of `long\', as computed by sizeof. */
+m4trace:ext/pdo_oci/config.m4:86: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of \'long\', as computed by sizeof. */
 @%:@undef SIZEOF_LONG])
 m4trace:ext/pdo_oci/config.m4:123: -1- AC_DEFINE_TRACE_LITERAL([SIZEOF_LONG])
 m4trace:ext/pdo_oci/config.m4:123: -1- m4_pattern_allow([^SIZEOF_LONG$])
-m4trace:ext/pdo_oci/config.m4:123: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of `long\', as computed by sizeof. */
+m4trace:ext/pdo_oci/config.m4:123: -1- AH_OUTPUT([SIZEOF_LONG], [/* The size of \'long\', as computed by sizeof. */
 @%:@undef SIZEOF_LONG])
 m4trace:ext/pdo_oci/config.m4:163: -1- AC_DEFINE_TRACE_LITERAL([HAVE_OCIENVCREATE])
 m4trace:ext/pdo_oci/config.m4:163: -1- m4_pattern_allow([^HAVE_OCIENVCREATE$])
@@ -3340,7 +3346,7 @@ m4trace:ext/pdo_pgsql/config.m4:63: -1- AC_DEFINE_TRACE_LITERAL([HAVE_PDO_PGSQL]
 m4trace:ext/pdo_pgsql/config.m4:63: -1- m4_pattern_allow([^HAVE_PDO_PGSQL$])
 m4trace:ext/pdo_pgsql/config.m4:63: -1- AH_OUTPUT([HAVE_PDO_PGSQL], [/* Whether to build PostgreSQL for PDO support or not */
 @%:@undef HAVE_PDO_PGSQL])
-m4trace:ext/pdo_pgsql/config.m4:69: -1- AH_OUTPUT([HAVE_LIBPQ], [/* Define to 1 if you have the `pq\' library (-lpq). */
+m4trace:ext/pdo_pgsql/config.m4:69: -1- AH_OUTPUT([HAVE_LIBPQ], [/* Define to 1 if you have the \'pq\' library (-lpq). */
 @%:@undef HAVE_LIBPQ])
 m4trace:ext/pdo_pgsql/config.m4:69: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LIBPQ])
 m4trace:ext/pdo_pgsql/config.m4:69: -1- m4_pattern_allow([^HAVE_LIBPQ$])
@@ -3376,7 +3382,7 @@ m4trace:ext/pgsql/config.m4:61: -1- AC_DEFINE_TRACE_LITERAL([HAVE_PGSQL])
 m4trace:ext/pgsql/config.m4:61: -1- m4_pattern_allow([^HAVE_PGSQL$])
 m4trace:ext/pgsql/config.m4:61: -1- AH_OUTPUT([HAVE_PGSQL], [/* Whether to build PostgreSQL support or not */
 @%:@undef HAVE_PGSQL])
-m4trace:ext/pgsql/config.m4:65: -1- AH_OUTPUT([HAVE_LIBPQ], [/* Define to 1 if you have the `pq\' library (-lpq). */
+m4trace:ext/pgsql/config.m4:65: -1- AH_OUTPUT([HAVE_LIBPQ], [/* Define to 1 if you have the \'pq\' library (-lpq). */
 @%:@undef HAVE_LIBPQ])
 m4trace:ext/pgsql/config.m4:65: -1- AC_DEFINE_TRACE_LITERAL([HAVE_LIBPQ])
 m4trace:ext/pgsql/config.m4:65: -1- m4_pattern_allow([^HAVE_LIBPQ$])
@@ -3418,59 +3424,59 @@ m4trace:ext/posix/config.m4:11: -1- AH_OUTPUT([HAVE_SYS_SYSMACROS_H], [/* Define
 @%:@undef HAVE_SYS_SYSMACROS_H])
 m4trace:ext/posix/config.m4:11: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SYS_SYSMACROS_H])
 m4trace:ext/posix/config.m4:11: -1- m4_pattern_allow([^HAVE_SYS_SYSMACROS_H$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_SETEUID], [/* Define to 1 if you have the `seteuid\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_SETEUID], [/* Define to 1 if you have the \'seteuid\' function. */
 @%:@undef HAVE_SETEUID])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETEUID])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_SETEUID$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_SETEGID], [/* Define to 1 if you have the `setegid\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_SETEGID], [/* Define to 1 if you have the \'setegid\' function. */
 @%:@undef HAVE_SETEGID])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETEGID])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_SETEGID$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_SETSID], [/* Define to 1 if you have the `setsid\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_SETSID], [/* Define to 1 if you have the \'setsid\' function. */
 @%:@undef HAVE_SETSID])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETSID])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_SETSID$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETSID], [/* Define to 1 if you have the `getsid\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETSID], [/* Define to 1 if you have the \'getsid\' function. */
 @%:@undef HAVE_GETSID])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETSID])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_GETSID$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETPGID], [/* Define to 1 if you have the `getpgid\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETPGID], [/* Define to 1 if you have the \'getpgid\' function. */
 @%:@undef HAVE_GETPGID])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETPGID])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_GETPGID$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_CTERMID], [/* Define to 1 if you have the `ctermid\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_CTERMID], [/* Define to 1 if you have the \'ctermid\' function. */
 @%:@undef HAVE_CTERMID])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_CTERMID])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_CTERMID$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_MKFIFO], [/* Define to 1 if you have the `mkfifo\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_MKFIFO], [/* Define to 1 if you have the \'mkfifo\' function. */
 @%:@undef HAVE_MKFIFO])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_MKFIFO])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_MKFIFO$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_MKNOD], [/* Define to 1 if you have the `mknod\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_MKNOD], [/* Define to 1 if you have the \'mknod\' function. */
 @%:@undef HAVE_MKNOD])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_MKNOD])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_MKNOD$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_SETRLIMIT], [/* Define to 1 if you have the `setrlimit\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_SETRLIMIT], [/* Define to 1 if you have the \'setrlimit\' function. */
 @%:@undef HAVE_SETRLIMIT])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SETRLIMIT])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_SETRLIMIT$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETRLIMIT], [/* Define to 1 if you have the `getrlimit\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETRLIMIT], [/* Define to 1 if you have the \'getrlimit\' function. */
 @%:@undef HAVE_GETRLIMIT])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETRLIMIT])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_GETRLIMIT$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETGROUPS], [/* Define to 1 if you have the `getgroups\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETGROUPS], [/* Define to 1 if you have the \'getgroups\' function. */
 @%:@undef HAVE_GETGROUPS])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETGROUPS])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_GETGROUPS$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_MAKEDEV], [/* Define to 1 if you have the `makedev\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_MAKEDEV], [/* Define to 1 if you have the \'makedev\' function. */
 @%:@undef HAVE_MAKEDEV])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_MAKEDEV])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_MAKEDEV$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_INITGROUPS], [/* Define to 1 if you have the `initgroups\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_INITGROUPS], [/* Define to 1 if you have the \'initgroups\' function. */
 @%:@undef HAVE_INITGROUPS])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_INITGROUPS])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_INITGROUPS$])
-m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETGRGID_R], [/* Define to 1 if you have the `getgrgid_r\' function. */
+m4trace:ext/posix/config.m4:13: -1- AH_OUTPUT([HAVE_GETGRGID_R], [/* Define to 1 if you have the \'getgrgid_r\' function. */
 @%:@undef HAVE_GETGRGID_R])
 m4trace:ext/posix/config.m4:13: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETGRGID_R])
 m4trace:ext/posix/config.m4:13: -1- m4_pattern_allow([^HAVE_GETGRGID_R$])
@@ -3648,15 +3654,15 @@ m4trace:ext/soap/config.m4:12: -1- m4_pattern_allow([^COMPILE_DL_SOAP$])
 m4trace:ext/soap/config.m4:12: -1- AH_OUTPUT([COMPILE_DL_SOAP], [/* Whether to build soap as dynamic module */
 @%:@undef COMPILE_DL_SOAP])
 m4trace:configure.ac:1070: -1- sinclude([ext/sockets/config.m4])
-m4trace:ext/sockets/config.m4:7: -1- AH_OUTPUT([HAVE_HSTRERROR], [/* Define to 1 if you have the `hstrerror\' function. */
+m4trace:ext/sockets/config.m4:7: -1- AH_OUTPUT([HAVE_HSTRERROR], [/* Define to 1 if you have the \'hstrerror\' function. */
 @%:@undef HAVE_HSTRERROR])
 m4trace:ext/sockets/config.m4:7: -1- AC_DEFINE_TRACE_LITERAL([HAVE_HSTRERROR])
 m4trace:ext/sockets/config.m4:7: -1- m4_pattern_allow([^HAVE_HSTRERROR$])
-m4trace:ext/sockets/config.m4:7: -1- AH_OUTPUT([HAVE_IF_NAMETOINDEX], [/* Define to 1 if you have the `if_nametoindex\' function. */
+m4trace:ext/sockets/config.m4:7: -1- AH_OUTPUT([HAVE_IF_NAMETOINDEX], [/* Define to 1 if you have the \'if_nametoindex\' function. */
 @%:@undef HAVE_IF_NAMETOINDEX])
 m4trace:ext/sockets/config.m4:7: -1- AC_DEFINE_TRACE_LITERAL([HAVE_IF_NAMETOINDEX])
 m4trace:ext/sockets/config.m4:7: -1- m4_pattern_allow([^HAVE_IF_NAMETOINDEX$])
-m4trace:ext/sockets/config.m4:7: -1- AH_OUTPUT([HAVE_IF_INDEXTONAME], [/* Define to 1 if you have the `if_indextoname\' function. */
+m4trace:ext/sockets/config.m4:7: -1- AH_OUTPUT([HAVE_IF_INDEXTONAME], [/* Define to 1 if you have the \'if_indextoname\' function. */
 @%:@undef HAVE_IF_INDEXTONAME])
 m4trace:ext/sockets/config.m4:7: -1- AC_DEFINE_TRACE_LITERAL([HAVE_IF_INDEXTONAME])
 m4trace:ext/sockets/config.m4:7: -1- m4_pattern_allow([^HAVE_IF_INDEXTONAME$])
@@ -3783,11 +3789,11 @@ m4trace:ext/standard/config.m4:312: -1- AH_OUTPUT([HAVE_FNMATCH], [/* Define to 
 @%:@undef HAVE_FNMATCH])
 m4trace:ext/standard/config.m4:318: -1- AC_DEFINE_TRACE_LITERAL([HAVE_FNMATCH])
 m4trace:ext/standard/config.m4:318: -1- m4_pattern_allow([^HAVE_FNMATCH$])
-m4trace:ext/standard/config.m4:318: -1- AH_OUTPUT([HAVE_FNMATCH], [/* Define to 1 if your system has a working POSIX `fnmatch\' function. */
+m4trace:ext/standard/config.m4:318: -1- AH_OUTPUT([HAVE_FNMATCH], [/* Define to 1 if your system has a working POSIX \'fnmatch\' function. */
 @%:@undef HAVE_FNMATCH])
-m4trace:ext/standard/config.m4:325: -1- AH_OUTPUT([HAVE_FORK], [/* Define to 1 if you have the `fork\' function. */
+m4trace:ext/standard/config.m4:325: -1- AH_OUTPUT([HAVE_FORK], [/* Define to 1 if you have the \'fork\' function. */
 @%:@undef HAVE_FORK])
-m4trace:ext/standard/config.m4:325: -1- AH_OUTPUT([HAVE_CREATEPROCESS], [/* Define to 1 if you have the `CreateProcess\' function. */
+m4trace:ext/standard/config.m4:325: -1- AH_OUTPUT([HAVE_CREATEPROCESS], [/* Define to 1 if you have the \'CreateProcess\' function. */
 @%:@undef HAVE_CREATEPROCESS])
 m4trace:ext/standard/config.m4:334: -1- AC_DEFINE_TRACE_LITERAL([PHP_CAN_SUPPORT_PROC_OPEN])
 m4trace:ext/standard/config.m4:334: -1- m4_pattern_allow([^PHP_CAN_SUPPORT_PROC_OPEN$])
@@ -3971,7 +3977,7 @@ m4trace:ext/standard/config.m4:401: -1- AH_OUTPUT([HAVE_STRPTIME_DECL_FAILS], [/
 @%:@undef HAVE_STRPTIME_DECL_FAILS])
 m4trace:ext/standard/config.m4:407: -1- AC_DEFINE_TRACE_LITERAL([HAVE_DECL_ARC4RANDOM_BUF])
 m4trace:ext/standard/config.m4:407: -1- m4_pattern_allow([^HAVE_DECL_ARC4RANDOM_BUF$])
-m4trace:ext/standard/config.m4:407: -1- AH_OUTPUT([HAVE_DECL_ARC4RANDOM_BUF], [/* Define to 1 if you have the declaration of `arc4random_buf\', and to 0 if
+m4trace:ext/standard/config.m4:407: -1- AH_OUTPUT([HAVE_DECL_ARC4RANDOM_BUF], [/* Define to 1 if you have the declaration of \'arc4random_buf\', and to 0 if
    you don\'t. */
 @%:@undef HAVE_DECL_ARC4RANDOM_BUF])
 m4trace:ext/standard/config.m4:413: -1- AH_OUTPUT([HAVE_COMMONCRYPTO_COMMONRANDOM_H], [/* Define to 1 if you have the <CommonCrypto/CommonRandom.h> header file. */
@@ -4254,15 +4260,15 @@ m4trace:configure.ac:1283: -1- AH_OUTPUT([HAVE_CPUID_H], [/* Define to 1 if you 
 @%:@undef HAVE_CPUID_H])
 m4trace:configure.ac:1283: -1- AC_DEFINE_TRACE_LITERAL([HAVE_CPUID_H])
 m4trace:configure.ac:1283: -1- m4_pattern_allow([^HAVE_CPUID_H$])
-m4trace:configure.ac:1283: -1- AH_OUTPUT([HAVE_GETPID], [/* Define to 1 if you have the `getpid\' function. */
+m4trace:configure.ac:1283: -1- AH_OUTPUT([HAVE_GETPID], [/* Define to 1 if you have the \'getpid\' function. */
 @%:@undef HAVE_GETPID])
 m4trace:configure.ac:1283: -1- AC_DEFINE_TRACE_LITERAL([HAVE_GETPID])
 m4trace:configure.ac:1283: -1- m4_pattern_allow([^HAVE_GETPID$])
-m4trace:configure.ac:1283: -1- AH_OUTPUT([HAVE_KILL], [/* Define to 1 if you have the `kill\' function. */
+m4trace:configure.ac:1283: -1- AH_OUTPUT([HAVE_KILL], [/* Define to 1 if you have the \'kill\' function. */
 @%:@undef HAVE_KILL])
 m4trace:configure.ac:1283: -1- AC_DEFINE_TRACE_LITERAL([HAVE_KILL])
 m4trace:configure.ac:1283: -1- m4_pattern_allow([^HAVE_KILL$])
-m4trace:configure.ac:1283: -1- AH_OUTPUT([HAVE_SIGSETJMP], [/* Define to 1 if you have the `sigsetjmp\' function. */
+m4trace:configure.ac:1283: -1- AH_OUTPUT([HAVE_SIGSETJMP], [/* Define to 1 if you have the \'sigsetjmp\' function. */
 @%:@undef HAVE_SIGSETJMP])
 m4trace:configure.ac:1283: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SIGSETJMP])
 m4trace:configure.ac:1283: -1- m4_pattern_allow([^HAVE_SIGSETJMP$])
@@ -4306,7 +4312,7 @@ m4trace:configure.ac:1285: -1- AC_DEFINE_TRACE_LITERAL([ZTS])
 m4trace:configure.ac:1285: -1- m4_pattern_allow([^ZTS$])
 m4trace:configure.ac:1285: -1- AH_OUTPUT([ZTS], [/* */
 @%:@undef ZTS])
-m4trace:configure.ac:1285: -1- AH_OUTPUT([inline], [/* Define to `__inline__\' or `__inline\' if that\'s what the C compiler
+m4trace:configure.ac:1285: -1- AH_OUTPUT([inline], [/* Define to \'__inline__\' or \'__inline\' if that\'s what the C compiler
    calls it, or to nothing if \'inline\' is not supported under any name.  */
 #ifndef __cplusplus
 #undef inline
@@ -4331,11 +4337,11 @@ m4trace:configure.ac:1285: -1- AC_DEFINE_TRACE_LITERAL([ZEND_MM_ALIGNMENT_LOG2])
 m4trace:configure.ac:1285: -1- m4_pattern_allow([^ZEND_MM_ALIGNMENT_LOG2$])
 m4trace:configure.ac:1285: -1- AH_OUTPUT([ZEND_MM_ALIGNMENT_LOG2], [/* */
 @%:@undef ZEND_MM_ALIGNMENT_LOG2])
-m4trace:configure.ac:1285: -1- AH_OUTPUT([HAVE_MREMAP], [/* Define to 1 if you have the `mremap\' function. */
+m4trace:configure.ac:1285: -1- AH_OUTPUT([HAVE_MREMAP], [/* Define to 1 if you have the \'mremap\' function. */
 @%:@undef HAVE_MREMAP])
 m4trace:configure.ac:1285: -1- AC_DEFINE_TRACE_LITERAL([HAVE_MREMAP])
 m4trace:configure.ac:1285: -1- m4_pattern_allow([^HAVE_MREMAP$])
-m4trace:configure.ac:1285: -1- AH_OUTPUT([HAVE_SIGACTION], [/* Define to 1 if you have the `sigaction\' function. */
+m4trace:configure.ac:1285: -1- AH_OUTPUT([HAVE_SIGACTION], [/* Define to 1 if you have the \'sigaction\' function. */
 @%:@undef HAVE_SIGACTION])
 m4trace:configure.ac:1285: -1- AC_DEFINE_TRACE_LITERAL([HAVE_SIGACTION])
 m4trace:configure.ac:1285: -1- m4_pattern_allow([^HAVE_SIGACTION$])
@@ -4486,8 +4492,8 @@ m4trace:configure.ac:1495: -1- m4_pattern_allow([^PHP_VERSION$])
 m4trace:configure.ac:1496: -1- AC_SUBST([PHP_VERSION_ID])
 m4trace:configure.ac:1496: -1- AC_SUBST_TRACE([PHP_VERSION_ID])
 m4trace:configure.ac:1496: -1- m4_pattern_allow([^PHP_VERSION_ID$])
-m4trace:configure.ac:1537: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [./lib/autoconf/general.m4:2981: AC_RUN_IFELSE is expanded from...
-lib/m4sugar/m4sh.m4:699: AS_IF is expanded from...
+m4trace:configure.ac:1537: -1- _m4_warn([cross], [AC_RUN_IFELSE called without default to allow cross compiling], [./lib/autoconf/general.m4:2979: AC_RUN_IFELSE is expanded from...
+lib/m4sugar/m4sh.m4:697: AS_IF is expanded from...
 build/ax_check_compile_flag.m4:39: AX_CHECK_COMPILE_FLAG is expanded from...
 configure.ac:1537: the top level])
 m4trace:configure.ac:1576: -1- AC_SUBST([AR_FLAGS], [cr])
