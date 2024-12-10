@@ -220,6 +220,8 @@ bool parse_long_opt(char *arg, cmd_data_t *cmd_data)
         export_all = true;
     } else if (strcmp(var, "preserve-dup-deps") == 0) {
         /* ignore */
+    } else if (strcmp(var, "tag") == 0) {
+        /* ignore */
     } else {
         return false;
     }
