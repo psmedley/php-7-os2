@@ -8,6 +8,10 @@ zend_test.observer.enabled=1
 zend_test.observer.show_output=1
 zend_test.observer.observe_function_names=a,d
 opcache.optimization_level=0
+--SKIPIF--
+<?php
+if (getenv("USE_ZEND_ALLOC") === "0") die("skip requires zmm");
+?>
 --FILE--
 <?php
 
@@ -43,6 +47,8 @@ a();
   <d>
   </d>
   <!-- init bailout() -->
+  <!-- init array_map() -->
+  <!-- init str_repeat() -->
 
 Fatal error: Allowed memory size of 20971520 bytes exhausted %s in %s on line %d
 </a>

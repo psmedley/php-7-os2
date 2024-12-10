@@ -35,8 +35,15 @@
 #include "zend_attributes.h"
 #include "zend_observer.h"
 #include "zend_fibers.h"
+#include "zend_call_stack.h"
 #include "zend_max_execution_timer.h"
+#include "zend_hrtime.h"
 #include "Optimizer/zend_optimizer.h"
+#include "php.h"
+#include "php_globals.h"
+
+// FIXME: Breaks the declaration of the function below
+#undef zenderror
 
 static size_t global_map_ptr_last = 0;
 static bool startup_done = false;
@@ -147,7 +154,7 @@ static ZEND_INI_MH(OnUpdateAssertions) /* {{{ */
 {
 	zend_long *p = (zend_long *) ZEND_INI_GET_ADDR();
 
-	zend_long val = zend_atol(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
+	zend_long val = zend_ini_parse_quantity_warn(new_value, entry->name);
 
 	if (stage != ZEND_INI_STAGE_STARTUP &&
 	    stage != ZEND_INI_STAGE_SHUTDOWN &&
@@ -174,10 +181,56 @@ static ZEND_INI_MH(OnSetExceptionStringParamMaxLen) /* {{{ */
 }
 /* }}} */
 
+#ifdef ZEND_CHECK_STACK_LIMIT
+static ZEND_INI_MH(OnUpdateMaxAllowedStackSize) /* {{{ */
+{
+	zend_long size = zend_ini_parse_quantity_warn(new_value, entry->name);
+
+	if (size < ZEND_MAX_ALLOWED_STACK_SIZE_UNCHECKED) {
+		zend_error(E_WARNING, "Invalid \"%s\" setting. Value must be >= %d, but got " ZEND_LONG_FMT,
+			ZSTR_VAL(entry->name), ZEND_MAX_ALLOWED_STACK_SIZE_UNCHECKED, size);
+		return FAILURE;
+	}
+
+	EG(max_allowed_stack_size) = size;
+
+	return SUCCESS;
+}
+/* }}} */
+
+static ZEND_INI_MH(OnUpdateReservedStackSize) /* {{{ */
+{
+	zend_ulong size = zend_ini_parse_uquantity_warn(new_value, entry->name);
+
+	/* Min value accounts for alloca, PCRE2 START_FRAMES_SIZE, and some buffer
+	 * for normal function calls.
+	 * We could reduce this on systems without alloca if we also add stack size
+	 * checks before pcre2_match(). */
+#ifdef ZEND_ALLOCA_MAX_SIZE
+	zend_ulong min = ZEND_ALLOCA_MAX_SIZE + 16*1024;
+#else
+	zend_ulong min = 32*1024;
+#endif
+
+	if (size == 0) {
+		size = min;
+	} else if (size < min) {
+		zend_error(E_WARNING, "Invalid \"%s\" setting. Value must be >= " ZEND_ULONG_FMT ", but got " ZEND_ULONG_FMT "\n",
+			ZSTR_VAL(entry->name), min, size);
+		return FAILURE;
+	}
+
+	EG(reserved_stack_size) = size;
+
+	return SUCCESS;
+}
+/* }}} */
+#endif /* ZEND_CHECK_STACK_LIMIT */
+
 static ZEND_INI_MH(OnUpdateFiberStackSize) /* {{{ */
 {
 	if (new_value) {
-		zend_long tmp = zend_atol(ZSTR_VAL(new_value), ZSTR_LEN(new_value));
+		zend_long tmp = zend_ini_parse_quantity_warn(new_value, entry->name);
 		if (tmp < 0) {
 			zend_error(E_WARNING, "fiber.stack_size must be a positive number");
 			return FAILURE;
@@ -209,6 +262,12 @@ ZEND_INI_BEGIN()
 	STD_ZEND_INI_BOOLEAN("zend.exception_ignore_args",	"0",	ZEND_INI_ALL,		OnUpdateBool, exception_ignore_args, zend_executor_globals, executor_globals)
 	STD_ZEND_INI_ENTRY("zend.exception_string_param_max_len",	"15",	ZEND_INI_ALL,	OnSetExceptionStringParamMaxLen,	exception_string_param_max_len,		zend_executor_globals,	executor_globals)
 	STD_ZEND_INI_ENTRY("fiber.stack_size",		NULL,			ZEND_INI_ALL,		OnUpdateFiberStackSize,		fiber_stack_size,	zend_executor_globals, 		executor_globals)
+#ifdef ZEND_CHECK_STACK_LIMIT
+	/* The maximum allowed call stack size. 0: auto detect, -1: no limit. For fibers, this is fiber.stack_size. */
+	STD_ZEND_INI_ENTRY("zend.max_allowed_stack_size",	"0",	ZEND_INI_SYSTEM,	OnUpdateMaxAllowedStackSize,	max_allowed_stack_size,		zend_executor_globals,	executor_globals)
+	/* Substracted from the max allowed stack size, as a buffer, when checking for overflow. 0: auto detect. */
+	STD_ZEND_INI_ENTRY("zend.reserved_stack_size",	"0",	ZEND_INI_SYSTEM,	OnUpdateReservedStackSize,	reserved_stack_size,		zend_executor_globals,	executor_globals)
+#endif
 
 ZEND_INI_END()
 
@@ -278,8 +337,7 @@ ZEND_API zend_string *zend_vstrpprintf(size_t max_len, const char *format, va_li
 		ZSTR_LEN(buf.s) = max_len;
 	}
 
-	smart_str_0(&buf);
-	return buf.s;
+	return smart_str_extract(&buf);
 }
 /* }}} */
 
@@ -493,6 +551,7 @@ static void zend_print_zval_r_to_buf(smart_str *buf, zval *expr, int indent) /* 
 				HashTable *properties;
 
 				zend_object *zobj = Z_OBJ_P(expr);
+				uint32_t *guard = zend_get_recursion_guard(zobj);
 				zend_string *class_name = Z_OBJ_HANDLER_P(expr, get_class_name)(zobj);
 				smart_str_appends(buf, ZSTR_VAL(class_name));
 				zend_string_release_ex(class_name, 0);
@@ -508,18 +567,19 @@ static void zend_print_zval_r_to_buf(smart_str *buf, zval *expr, int indent) /* 
 					smart_str_appendc(buf, '\n');
 				}
 
-				if (GC_IS_RECURSIVE(Z_OBJ_P(expr))) {
+				if (ZEND_GUARD_OR_GC_IS_RECURSIVE(guard, DEBUG, zobj)) {
 					smart_str_appends(buf, " *RECURSION*");
 					return;
 				}
 
 				if ((properties = zend_get_properties_for(expr, ZEND_PROP_PURPOSE_DEBUG)) == NULL) {
+					print_hash(buf, (HashTable*) &zend_empty_array, indent, 1);
 					break;
 				}
 
-				GC_PROTECT_RECURSION(Z_OBJ_P(expr));
+				ZEND_GUARD_OR_GC_PROTECT_RECURSION(guard, DEBUG, zobj);
 				print_hash(buf, properties, indent, 1);
-				GC_UNPROTECT_RECURSION(Z_OBJ_P(expr));
+				ZEND_GUARD_OR_GC_UNPROTECT_RECURSION(guard, DEBUG, zobj);
 
 				zend_release_properties(properties);
 				break;
@@ -627,69 +687,6 @@ static void auto_global_dtor(zval *zv) /* {{{ */
 /* }}} */
 
 #ifdef ZTS
-static void function_copy_ctor(zval *zv) /* {{{ */
-{
-	zend_function *old_func = Z_FUNC_P(zv);
-	zend_function *func;
-
-	if (old_func->type == ZEND_USER_FUNCTION) {
-		ZEND_ASSERT(old_func->op_array.fn_flags & ZEND_ACC_IMMUTABLE);
-		return;
-	}
-	func = pemalloc(sizeof(zend_internal_function), 1);
-	Z_FUNC_P(zv) = func;
-	memcpy(func, old_func, sizeof(zend_internal_function));
-	function_add_ref(func);
-	if ((old_func->common.fn_flags & (ZEND_ACC_HAS_RETURN_TYPE|ZEND_ACC_HAS_TYPE_HINTS))
-	 && old_func->common.arg_info) {
-		uint32_t i;
-		uint32_t num_args = old_func->common.num_args + 1;
-		zend_arg_info *arg_info = old_func->common.arg_info - 1;
-		zend_arg_info *new_arg_info;
-
-		if (old_func->common.fn_flags & ZEND_ACC_VARIADIC) {
-			num_args++;
-		}
-		new_arg_info = pemalloc(sizeof(zend_arg_info) * num_args, 1);
-		memcpy(new_arg_info, arg_info, sizeof(zend_arg_info) * num_args);
-		for (i = 0 ; i < num_args; i++) {
-			if (ZEND_TYPE_HAS_LIST(arg_info[i].type)) {
-				zend_type_list *old_list = ZEND_TYPE_LIST(arg_info[i].type);
-				zend_type_list *new_list = pemalloc(ZEND_TYPE_LIST_SIZE(old_list->num_types), 1);
-				memcpy(new_list, old_list, ZEND_TYPE_LIST_SIZE(old_list->num_types));
-				ZEND_TYPE_SET_PTR(new_arg_info[i].type, new_list);
-
-				zend_type *list_type;
-				ZEND_TYPE_LIST_FOREACH(new_list, list_type) {
-					zend_string *name = zend_string_dup(ZEND_TYPE_NAME(*list_type), 1);
-					ZEND_TYPE_SET_PTR(*list_type, name);
-				} ZEND_TYPE_LIST_FOREACH_END();
-			} else if (ZEND_TYPE_HAS_NAME(arg_info[i].type)) {
-				zend_string *name = zend_string_dup(ZEND_TYPE_NAME(arg_info[i].type), 1);
-				ZEND_TYPE_SET_PTR(new_arg_info[i].type, name);
-			}
-		}
-		func->common.arg_info = new_arg_info + 1;
-	}
-	if (old_func->common.attributes) {
-		zend_attribute *old_attr;
-
-		func->common.attributes = NULL;
-
-		ZEND_HASH_FOREACH_PTR(old_func->common.attributes, old_attr) {
-			uint32_t i;
-			zend_attribute *attr;
-
-			attr = zend_add_attribute(&func->common.attributes, old_attr->name, old_attr->argc, old_attr->flags, old_attr->offset, old_attr->lineno);
-
-			for (i = 0 ; i < old_attr->argc; i++) {
-				ZVAL_DUP(&attr->args[i].value, &old_attr->args[i].value);
-			}
-		} ZEND_HASH_FOREACH_END();
-	}
-}
-/* }}} */
-
 static void auto_global_copy_ctor(zval *zv) /* {{{ */
 {
 	zend_auto_global *old_ag = (zend_auto_global *) Z_PTR_P(zv);
@@ -706,10 +703,12 @@ static void auto_global_copy_ctor(zval *zv) /* {{{ */
 static void compiler_globals_ctor(zend_compiler_globals *compiler_globals) /* {{{ */
 {
 	compiler_globals->compiled_filename = NULL;
+	compiler_globals->zend_lineno = 0;
 
 	compiler_globals->function_table = (HashTable *) malloc(sizeof(HashTable));
 	zend_hash_init(compiler_globals->function_table, 1024, NULL, ZEND_FUNCTION_DTOR, 1);
-	zend_hash_copy(compiler_globals->function_table, global_function_table, function_copy_ctor);
+	zend_hash_copy(compiler_globals->function_table, global_function_table, NULL);
+	compiler_globals->copied_functions_count = zend_hash_num_elements(compiler_globals->function_table);
 
 	compiler_globals->class_table = (HashTable *) malloc(sizeof(HashTable));
 	zend_hash_init(compiler_globals->class_table, 64, NULL, ZEND_CLASS_DTOR, 1);
@@ -724,7 +723,6 @@ static void compiler_globals_ctor(zend_compiler_globals *compiler_globals) /* {{
 	compiler_globals->script_encoding_list = NULL;
 	compiler_globals->current_linking_class = NULL;
 
-#if ZEND_MAP_PTR_KIND == ZEND_MAP_PTR_KIND_PTR_OR_OFFSET
 	/* Map region is going to be created and resized at run-time. */
 	compiler_globals->map_ptr_real_base = NULL;
 	compiler_globals->map_ptr_base = ZEND_MAP_PTR_BIASED_BASE(NULL);
@@ -738,15 +736,27 @@ static void compiler_globals_ctor(zend_compiler_globals *compiler_globals) /* {{
 		compiler_globals->map_ptr_base = ZEND_MAP_PTR_BIASED_BASE(base);
 		memset(base, 0, compiler_globals->map_ptr_last * sizeof(void*));
 	}
-#else
-# error "Unknown ZEND_MAP_PTR_KIND"
-#endif
 }
 /* }}} */
 
 static void compiler_globals_dtor(zend_compiler_globals *compiler_globals) /* {{{ */
 {
 	if (compiler_globals->function_table != GLOBAL_FUNCTION_TABLE) {
+		uint32_t n = compiler_globals->copied_functions_count;
+
+	    /* Prevent destruction of functions copied from the main process context */
+		if (zend_hash_num_elements(compiler_globals->function_table) <= n) {
+			compiler_globals->function_table->nNumUsed = 0;
+		} else {
+			Bucket *p = compiler_globals->function_table->arData;
+
+			compiler_globals->function_table->nNumOfElements -= n;
+			while (n != 0) {
+				ZVAL_UNDEF(&p->val);
+				p++;
+				n--;
+			}
+		}
 		zend_hash_destroy(compiler_globals->function_table);
 		free(compiler_globals->function_table);
 	}
@@ -780,6 +790,7 @@ static void executor_globals_ctor(zend_executor_globals *executor_globals) /* {{
 	zend_init_call_trampoline_op();
 	memset(&executor_globals->trampoline, 0, sizeof(zend_op_array));
 	executor_globals->capture_warnings_during_sccp = 0;
+	executor_globals->user_error_handler_error_reporting = 0;
 	ZVAL_UNDEF(&executor_globals->user_error_handler);
 	ZVAL_UNDEF(&executor_globals->user_exception_handler);
 	executor_globals->in_autoload = NULL;
@@ -806,6 +817,12 @@ static void executor_globals_ctor(zend_executor_globals *executor_globals) /* {{
 	executor_globals->record_errors = false;
 	executor_globals->num_errors = 0;
 	executor_globals->errors = NULL;
+	executor_globals->filename_override = NULL;
+	executor_globals->lineno_override = -1;
+#ifdef ZEND_CHECK_STACK_LIMIT
+	executor_globals->stack_limit = (void*)0;
+	executor_globals->stack_base = (void*)0;
+#endif
 #ifdef ZEND_MAX_EXECUTION_TIMERS
 	executor_globals->pid = 0;
 	executor_globals->oldact = (struct sigaction){0};
@@ -831,6 +848,9 @@ static void zend_new_thread_end_handler(THREAD_T thread_id) /* {{{ */
 {
 	zend_copy_ini_directives();
 	zend_ini_refresh_caches(ZEND_INI_STAGE_STARTUP);
+#ifdef ZEND_CHECK_STACK_LIMIT
+	zend_call_stack_init();
+#endif
 	zend_max_execution_timer_init();
 }
 /* }}} */
@@ -856,9 +876,7 @@ static void php_scanner_globals_ctor(zend_php_scanner_globals *scanner_globals_p
 static void module_destructor_zval(zval *zv) /* {{{ */
 {
 	zend_module_entry *module = (zend_module_entry*)Z_PTR_P(zv);
-
 	module_destructor(module);
-	free(module);
 }
 /* }}} */
 
@@ -897,6 +915,7 @@ void zend_startup(zend_utility_functions *utility_functions) /* {{{ */
 	fpsetmask(0);
 #endif
 
+	zend_startup_hrtime();
 	zend_startup_strtod();
 	zend_startup_extensions_mechanism();
 
@@ -994,25 +1013,12 @@ void zend_startup(zend_utility_functions *utility_functions) /* {{{ */
 #ifdef ZEND_WIN32
 	zend_get_windows_version_info(&EG(windows_version_info));
 #endif
-# if ZEND_MAP_PTR_KIND == ZEND_MAP_PTR_KIND_PTR
-		/* Create a map region, used for indirect pointers from shared to
-		 * process memory. It's allocated once and never resized.
-		 * All processes must map it into the same address space.
-		 */
-		CG(map_ptr_size) = 1024 * 1024; // TODO: initial size ???
-		CG(map_ptr_last) = 0;
-		CG(map_ptr_real_base) = pemalloc(CG(map_ptr_size) * sizeof(void*), 1);
-		CG(map_ptr_base) = ZEND_MAP_PTR_BIASED_BASE(CG(map_ptr_real_base));
-# elif ZEND_MAP_PTR_KIND == ZEND_MAP_PTR_KIND_PTR_OR_OFFSET
-		/* Map region is going to be created and resized at run-time. */
-		CG(map_ptr_real_base) = NULL;
-		CG(map_ptr_base) = ZEND_MAP_PTR_BIASED_BASE(NULL);
-		CG(map_ptr_size) = 0;
-		CG(map_ptr_last) = 0;
-# else
-#  error "Unknown ZEND_MAP_PTR_KIND"
-# endif
-#endif
+	/* Map region is going to be created and resized at run-time. */
+	CG(map_ptr_real_base) = NULL;
+	CG(map_ptr_base) = ZEND_MAP_PTR_BIASED_BASE(NULL);
+	CG(map_ptr_size) = 0;
+	CG(map_ptr_last) = 0;
+#endif /* ZTS */
 	EG(error_reporting) = E_ALL & ~E_NOTICE;
 
 	zend_interned_strings_init();
@@ -1107,6 +1113,10 @@ zend_result zend_post_startup(void) /* {{{ */
 	global_map_ptr_last = CG(map_ptr_last);
 #endif
 
+#ifdef ZEND_CHECK_STACK_LIMIT
+	zend_call_stack_init();
+#endif
+
 	return SUCCESS;
 }
 /* }}} */
@@ -1160,6 +1170,8 @@ void zend_shutdown(void) /* {{{ */
 	}
 #endif
 	zend_destroy_rsrc_list_dtors();
+
+	zend_unload_modules();
 
 	zend_optimizer_shutdown();
 	startup_done = false;
@@ -1258,6 +1270,7 @@ ZEND_API void zend_activate(void) /* {{{ */
 	if (CG(map_ptr_last)) {
 		memset(CG(map_ptr_real_base), 0, CG(map_ptr_last) * sizeof(void*));
 	}
+	zend_init_internal_run_time_cache();
 	zend_observer_activate();
 }
 /* }}} */
@@ -1321,16 +1334,7 @@ ZEND_API void zend_deactivate(void) /* {{{ */
 	}
 
 #if GC_BENCH
-	fprintf(stderr, "GC Statistics\n");
-	fprintf(stderr, "-------------\n");
-	fprintf(stderr, "Runs:               %d\n", GC_G(gc_runs));
-	fprintf(stderr, "Collected:          %d\n", GC_G(collected));
-	fprintf(stderr, "Root buffer length: %d\n", GC_G(root_buf_length));
-	fprintf(stderr, "Root buffer peak:   %d\n\n", GC_G(root_buf_peak));
-	fprintf(stderr, "      Possible            Remove from  Marked\n");
-	fprintf(stderr, "        Root    Buffered     buffer     grey\n");
-	fprintf(stderr, "      --------  --------  -----------  ------\n");
-	fprintf(stderr, "ZVAL  %8d  %8d  %9d  %8d\n", GC_G(zval_possible_root), GC_G(zval_buffered), GC_G(zval_remove_from_buffer), GC_G(zval_marked_grey));
+	gc_bench_print();
 #endif
 }
 /* }}} */
@@ -1404,7 +1408,7 @@ ZEND_API ZEND_COLD void zend_error_zstr_at(
 		/* This is very inefficient for a large number of errors.
 		 * Use pow2 realloc if it becomes a problem. */
 		EG(num_errors)++;
-		EG(errors) = erealloc(EG(errors), sizeof(zend_error_info) * EG(num_errors));
+		EG(errors) = erealloc(EG(errors), sizeof(zend_error_info*) * EG(num_errors));
 		EG(errors)[EG(num_errors)-1] = info;
 	}
 
@@ -1740,6 +1744,29 @@ ZEND_API ZEND_COLD void zend_throw_error(zend_class_entry *exception_ce, const c
 }
 /* }}} */
 
+/* type should be one of the BP_VAR_* constants, only special messages happen for isset/empty and unset */
+ZEND_API ZEND_COLD void zend_illegal_container_offset(const zend_string *container, const zval *offset, int type)
+{
+	switch (type) {
+		case BP_VAR_IS:
+			zend_type_error("Cannot access offset of type %s in isset or empty",
+				zend_zval_type_name(offset));
+			return;
+		case BP_VAR_UNSET:
+			/* Consistent error for when trying to unset a string offset */
+			if (zend_string_equals(container, ZSTR_KNOWN(ZEND_STR_STRING))) {
+				zend_throw_error(NULL, "Cannot unset string offsets");
+			} else {
+				zend_type_error("Cannot unset offset of type %s on %s", zend_zval_type_name(offset), ZSTR_VAL(container));
+			}
+			return;
+		default:
+			zend_type_error("Cannot access offset of type %s on %s",
+				zend_zval_type_name(offset), ZSTR_VAL(container));
+			return;
+	}
+}
+
 ZEND_API ZEND_COLD void zend_type_error(const char *format, ...) /* {{{ */
 {
 	va_list va;
@@ -1816,7 +1843,10 @@ ZEND_API ZEND_COLD void zend_user_exception_handler(void) /* {{{ */
 	old_exception = EG(exception);
 	EG(exception) = NULL;
 	ZVAL_OBJ(&params[0], old_exception);
+
 	ZVAL_COPY_VALUE(&orig_user_exception_handler, &EG(user_exception_handler));
+	zend_stack_push(&EG(user_exception_handlers), &orig_user_exception_handler);
+	ZVAL_UNDEF(&EG(user_exception_handler));
 
 	if (call_user_function(CG(function_table), NULL, &orig_user_exception_handler, &retval2, 1, params) == SUCCESS) {
 		zval_ptr_dtor(&retval2);
@@ -1827,6 +1857,14 @@ ZEND_API ZEND_COLD void zend_user_exception_handler(void) /* {{{ */
 		OBJ_RELEASE(old_exception);
 	} else {
 		EG(exception) = old_exception;
+	}
+
+	if (Z_TYPE(EG(user_exception_handler)) == IS_UNDEF) {
+		zval *tmp = zend_stack_top(&EG(user_exception_handlers));
+		if (tmp) {
+			ZVAL_COPY_VALUE(&EG(user_exception_handler), tmp);
+			zend_stack_del_top(&EG(user_exception_handlers));
+		}
 	}
 } /* }}} */
 
@@ -1918,28 +1956,15 @@ ZEND_API void *zend_map_ptr_new(void)
 	void **ptr;
 
 	if (CG(map_ptr_last) >= CG(map_ptr_size)) {
-#if ZEND_MAP_PTR_KIND == ZEND_MAP_PTR_KIND_PTR
-		// TODO: error ???
-		ZEND_UNREACHABLE();
-#elif ZEND_MAP_PTR_KIND == ZEND_MAP_PTR_KIND_PTR_OR_OFFSET
 		/* Grow map_ptr table */
 		CG(map_ptr_size) = ZEND_MM_ALIGNED_SIZE_EX(CG(map_ptr_last) + 1, 4096);
 		CG(map_ptr_real_base) = perealloc(CG(map_ptr_real_base), CG(map_ptr_size) * sizeof(void*), 1);
 		CG(map_ptr_base) = ZEND_MAP_PTR_BIASED_BASE(CG(map_ptr_real_base));
-#else
-# error "Unknown ZEND_MAP_PTR_KIND"
-#endif
 	}
 	ptr = (void**)CG(map_ptr_real_base) + CG(map_ptr_last);
 	*ptr = NULL;
 	CG(map_ptr_last)++;
-#if ZEND_MAP_PTR_KIND == ZEND_MAP_PTR_KIND_PTR
-	return ptr;
-#elif ZEND_MAP_PTR_KIND == ZEND_MAP_PTR_KIND_PTR_OR_OFFSET
 	return ZEND_MAP_PTR_PTR2OFFSET(ptr);
-#else
-# error "Unknown ZEND_MAP_PTR_KIND"
-#endif
 }
 
 ZEND_API void zend_map_ptr_extend(size_t last)
@@ -1948,17 +1973,10 @@ ZEND_API void zend_map_ptr_extend(size_t last)
 		void **ptr;
 
 		if (last >= CG(map_ptr_size)) {
-#if ZEND_MAP_PTR_KIND == ZEND_MAP_PTR_KIND_PTR
-			/* This may never happen */
-			ZEND_UNREACHABLE();
-#elif ZEND_MAP_PTR_KIND == ZEND_MAP_PTR_KIND_PTR_OR_OFFSET
 			/* Grow map_ptr table */
 			CG(map_ptr_size) = ZEND_MM_ALIGNED_SIZE_EX(last, 4096);
 			CG(map_ptr_real_base) = perealloc(CG(map_ptr_real_base), CG(map_ptr_size) * sizeof(void*), 1);
 			CG(map_ptr_base) = ZEND_MAP_PTR_BIASED_BASE(CG(map_ptr_real_base));
-#else
-# error "Unknown ZEND_MAP_PTR_KIND"
-#endif
 		}
 		ptr = (void**)CG(map_ptr_real_base) + CG(map_ptr_last);
 		memset(ptr, 0, (last - CG(map_ptr_last)) * sizeof(void*));

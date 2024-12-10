@@ -4,6 +4,8 @@ Bug #27722 (Segfault on schema without targetNamespace)
 soap
 --INI--
 soap.wsdl_cache_enabled=0
+--ENV--
+LSAN_OPTIONS=detect_leaks=0
 --FILE--
 <?php
 $x = new SoapClient(__DIR__."/bug27722.wsdl");

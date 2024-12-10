@@ -14,7 +14,9 @@
    +----------------------------------------------------------------------+
  */
 
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE
+#endif
 #include "php.h"
 #include "php_globals.h"
 #include "php_network.h"
@@ -44,7 +46,14 @@ typedef struct {
 
 FILE *fopencookie(void *cookie, const char *mode, COOKIE_IO_FUNCTIONS_T *funcs)
 {
-	return funopen(cookie, funcs->reader, funcs->writer, funcs->seeker, funcs->closer);
+	FILE *file = funopen(cookie, funcs->reader, funcs->writer, funcs->seeker, funcs->closer);
+	if (file) {
+		/* Buffering of FILE handles is stateful.
+		 * A bailout during these can corrupt the state of the FILE handle
+		 * and cause memory corruption errors. See GH-11078. */
+		setvbuf(file, NULL, _IONBF, 0);
+	}
+	return file;
 }
 # define HAVE_FOPENCOOKIE 1
 # define PHP_EMULATE_FOPENCOOKIE 1
@@ -102,6 +111,9 @@ static ssize_t stream_cookie_writer(void *cookie, const char *buffer, size_t siz
 
 # ifdef COOKIE_SEEKER_USES_OFF64_T
 static int stream_cookie_seeker(void *cookie, off64_t *position, int whence)
+# else
+static int stream_cookie_seeker(void *cookie, off_t *position, int whence)
+# endif
 {
 
 	*position = php_stream_seek((php_stream *)cookie, (zend_off_t)*position, whence);
@@ -111,13 +123,6 @@ static int stream_cookie_seeker(void *cookie, off64_t *position, int whence)
 	}
 	return 0;
 }
-# else
-static int stream_cookie_seeker(void *cookie, zend_off_t position, int whence)
-{
-
-	return php_stream_seek((php_stream *)cookie, position, whence);
-}
-# endif
 
 static int stream_cookie_closer(void *cookie)
 {

@@ -114,12 +114,14 @@ static inline int phpdbg_call_register(phpdbg_param_t *stack) /* {{{ */
 
 			ZVAL_STRINGL(&fci.function_name, lc_name, name->len);
 			fci.size = sizeof(zend_fcall_info);
-			//???fci.symbol_table = zend_rebuild_symbol_table();
 			fci.object = NULL;
 			fci.retval = &fretval;
+			fci.param_count = 0;
+			fci.params = NULL;
+			fci.named_params = NULL;
 
+			zval params;
 			if (name->next) {
-				zval params;
 				phpdbg_param_t *next = name->next;
 
 				array_init(&params);
@@ -170,11 +172,8 @@ static inline int phpdbg_call_register(phpdbg_param_t *stack) /* {{{ */
 
 					next = next->next;
 				}
-
-				zend_fcall_info_args(&fci, &params);
-			} else {
-				fci.params = NULL;
-				fci.param_count = 0;
+				/* Add positional arguments */
+				fci.named_params = Z_ARRVAL(params);
 			}
 
 			phpdbg_activate_err_buf(0);
@@ -306,7 +305,7 @@ void phpdbg_string_init(char *buffer) {
 
 void phpdbg_try_file_init(char *init_file, size_t init_file_len, bool free_init) /* {{{ */
 {
-	zend_stat_t sb;
+	zend_stat_t sb = {0};
 
 	if (init_file && VCWD_STAT(init_file, &sb) != -1) {
 		FILE *fp = fopen(init_file, "r");
@@ -364,7 +363,7 @@ void phpdbg_init(char *init_file, size_t init_file_len, bool use_default) /* {{{
 			}
 
 			ZEND_IGNORE_VALUE(asprintf(&init_file, "%s/%s", scan_dir, PHPDBG_INIT_FILENAME));
-			phpdbg_try_file_init(init_file, strlen(init_file), 1);
+			phpdbg_try_file_init(init_file, strlen(init_file), 0);
 			free(init_file);
 			if (i == -1) {
 				break;
@@ -398,7 +397,7 @@ void phpdbg_clean(bool full, bool resubmit) /* {{{ */
 
 PHPDBG_COMMAND(exec) /* {{{ */
 {
-	zend_stat_t sb;
+	zend_stat_t sb = {0};
 
 	if (VCWD_STAT(param->str, &sb) != FAILURE) {
 		if (sb.st_mode & (S_IFREG|S_IFLNK)) {
@@ -516,7 +515,7 @@ exec_code:
 } /* }}} */
 
 int phpdbg_compile_stdin(zend_string *code) {
-	PHPDBG_G(ops) = zend_compile_string(code, "Standard input code");
+	PHPDBG_G(ops) = zend_compile_string(code, "Standard input code", ZEND_COMPILE_POSITION_AFTER_OPEN_TAG);
 	zend_string_release(code);
 
 	if (EG(exception)) {
@@ -718,8 +717,8 @@ static inline void phpdbg_handle_exception(void) /* {{{ */
 	EG(exception) = NULL;
 
 	zend_call_known_instance_method_with_0_params(ex->ce->__tostring, ex, &tmp);
-	file = zval_get_string(zend_read_property(zend_get_exception_base(ex), ex, ZEND_STRL("file"), 1, &rv));
-	line = zval_get_long(zend_read_property(zend_get_exception_base(ex), ex, ZEND_STRL("line"), 1, &rv));
+	file = zval_get_string(zend_read_property_ex(zend_get_exception_base(ex), ex, ZSTR_KNOWN(ZEND_STR_FILE), /* silent */ true, &rv));
+	line = zval_get_long(zend_read_property_ex(zend_get_exception_base(ex), ex, ZSTR_KNOWN(ZEND_STR_LINE), /* silent */ true, &rv));
 
 	if (EG(exception)) {
 		EG(exception) = NULL;
@@ -727,7 +726,7 @@ static inline void phpdbg_handle_exception(void) /* {{{ */
 	} else {
 		zend_update_property_string(zend_get_exception_base(ex), ex, ZEND_STRL("string"), Z_STRVAL(tmp));
 		zval_ptr_dtor(&tmp);
-		msg = zval_get_string(zend_read_property(zend_get_exception_base(ex), ex, ZEND_STRL("string"), 1, &rv));
+		msg = zval_get_string(zend_read_property_ex(zend_get_exception_base(ex), ex, ZSTR_KNOWN(ZEND_STR_STRING), /* silent */ true, &rv));
 	}
 
 	phpdbg_error("Uncaught %s in %s on line " ZEND_LONG_FMT, ZSTR_VAL(ex->ce->name), ZSTR_VAL(file), line);
@@ -907,7 +906,7 @@ free_cmd:
 				}
 			} zend_end_try();
 
-			if (EG(exception)) {
+			if (EG(exception) && !zend_is_unwind_exit(EG(exception))) {
 				phpdbg_handle_exception();
 			}
 		}
@@ -1256,11 +1255,10 @@ PHPDBG_API const char *phpdbg_load_module_or_extension(char **path, const char *
 #if ZEND_EXTENSIONS_SUPPORT
 	do {
 		zend_extension *new_extension;
-		zend_extension_version_info *extension_version_info;
 
-		extension_version_info = (zend_extension_version_info *) DL_FETCH_SYMBOL(handle, "extension_version_info");
+		const zend_extension_version_info *extension_version_info = (const zend_extension_version_info *) DL_FETCH_SYMBOL(handle, "extension_version_info");
 		if (!extension_version_info) {
-			extension_version_info = (zend_extension_version_info *) DL_FETCH_SYMBOL(handle, "_extension_version_info");
+			extension_version_info = (const zend_extension_version_info *) DL_FETCH_SYMBOL(handle, "_extension_version_info");
 		}
 		new_extension = (zend_extension *) DL_FETCH_SYMBOL(handle, "zend_extension_entry");
 		if (!new_extension) {
@@ -1392,7 +1390,7 @@ PHPDBG_COMMAND(dl) /* {{{ */
 
 PHPDBG_COMMAND(source) /* {{{ */
 {
-	zend_stat_t sb;
+	zend_stat_t sb = {0};
 
 	if (VCWD_STAT(param->str, &sb) != -1) {
 		phpdbg_try_file_init(param->str, param->len, 0);
@@ -1551,6 +1549,8 @@ int phpdbg_interactive(bool allow_async_unsafe, char *input) /* {{{ */
 				ret = phpdbg_stack_execute(&stack, allow_async_unsafe);
 			} zend_catch {
 				phpdbg_stack_free(&stack);
+				phpdbg_destroy_input(&input);
+				/* TODO: should use proper unwinding instead of bailing out */
 				zend_bailout();
 			} zend_end_try();
 
@@ -1665,7 +1665,7 @@ void phpdbg_execute_ex(zend_execute_data *execute_data) /* {{{ */
 		}
 
 #ifdef ZEND_WIN32
-		if (EG(timed_out)) {
+		if (zend_atomic_bool_load_ex(&EG(timed_out))) {
 			zend_timeout();
 		}
 #endif
@@ -1699,9 +1699,9 @@ void phpdbg_execute_ex(zend_execute_data *execute_data) /* {{{ */
 			PHPDBG_G(handled_exception) = exception;
 
 			zval rv;
-			zend_string *file = zval_get_string(zend_read_property(zend_get_exception_base(exception), exception, ZEND_STRL("file"), 1, &rv));
-			zend_long line = zval_get_long(zend_read_property(zend_get_exception_base(exception), exception, ZEND_STRL("line"), 1, &rv));
-			zend_string *msg = zval_get_string(zend_read_property(zend_get_exception_base(exception), exception, ZEND_STRL("message"), 1, &rv));
+			zend_string *file = zval_get_string(zend_read_property_ex(zend_get_exception_base(exception), exception, ZSTR_KNOWN(ZEND_STR_FILE), /* silent */ true, &rv));
+			zend_long line = zval_get_long(zend_read_property_ex(zend_get_exception_base(exception), exception, ZSTR_KNOWN(ZEND_STR_LINE), /* silent */ true, &rv));
+			zend_string *msg = zval_get_string(zend_read_property_ex(zend_get_exception_base(exception), exception, ZSTR_KNOWN(ZEND_STR_MESSAGE), /* silent */ true, &rv));
 
 			phpdbg_error("Uncaught %s in %s on line " ZEND_LONG_FMT ": %.*s",
 				ZSTR_VAL(exception->ce->name), ZSTR_VAL(file), line,

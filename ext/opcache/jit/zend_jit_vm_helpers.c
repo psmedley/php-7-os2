@@ -183,7 +183,7 @@ bool ZEND_FASTCALL zend_jit_deprecated_helper(OPLINE_D)
 		zend_execute_data *execute_data = EG(current_execute_data);
 #endif
 		const zend_op *opline = EG(opline_before_exception);
-		if (RETURN_VALUE_USED(opline)) {
+		if (opline && RETURN_VALUE_USED(opline)) {
 			ZVAL_UNDEF(EX_VAR(opline->result.var));
 		}
 
@@ -197,6 +197,43 @@ bool ZEND_FASTCALL zend_jit_deprecated_helper(OPLINE_D)
 		return 0;
 	}
 	return 1;
+}
+
+void ZEND_FASTCALL zend_jit_undefined_long_key(EXECUTE_DATA_D)
+{
+	const zend_op *opline = EX(opline);
+	zval *result = EX_VAR(opline->result.var);
+	zval *dim;
+
+	if (opline->op2_type == IS_CONST) {
+		dim = RT_CONSTANT(opline, opline->op2);
+	} else {
+		dim = EX_VAR(opline->op2.var);
+	}
+	ZEND_ASSERT(Z_TYPE_P(dim) == IS_LONG);
+	zend_error(E_WARNING, "Undefined array key " ZEND_LONG_FMT, Z_LVAL_P(dim));
+	ZVAL_NULL(result);
+}
+
+void ZEND_FASTCALL zend_jit_undefined_string_key(EXECUTE_DATA_D)
+{
+	const zend_op *opline = EX(opline);
+	zval *result = EX_VAR(opline->result.var);
+	zval *dim;
+	zend_ulong lval;
+
+	if (opline->op2_type == IS_CONST) {
+		dim = RT_CONSTANT(opline, opline->op2);
+	} else {
+		dim = EX_VAR(opline->op2.var);
+	}
+	ZEND_ASSERT(Z_TYPE_P(dim) == IS_STRING);
+	if (ZEND_HANDLE_NUMERIC(Z_STR_P(dim), lval)) {
+		zend_error(E_WARNING, "Undefined array key " ZEND_LONG_FMT, lval);
+	} else {
+		zend_error(E_WARNING, "Undefined array key \"%s\"", Z_STRVAL_P(dim));
+	}
+	ZVAL_NULL(result);
 }
 
 ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL zend_jit_profile_helper(ZEND_OPCODE_HANDLER_ARGS)
@@ -360,7 +397,7 @@ ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL zend_jit_loop_trace_helper(ZEND_OPCODE_HAN
 	trace_buffer[idx].info = _op | (_info); \
 	trace_buffer[idx].ptr = _ptr; \
 	idx++; \
-	if (idx >= ZEND_JIT_TRACE_MAX_LENGTH - 2) { \
+	if (idx >= JIT_G(max_trace_length) - 2) { \
 		stop = ZEND_JIT_TRACE_STOP_TOO_LONG; \
 		break; \
 	}
@@ -372,7 +409,7 @@ ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL zend_jit_loop_trace_helper(ZEND_OPCODE_HAN
 	trace_buffer[idx].op3_type = _op3_type; \
 	trace_buffer[idx].ptr = _ptr; \
 	idx++; \
-	if (idx >= ZEND_JIT_TRACE_MAX_LENGTH - 2) { \
+	if (idx >= JIT_G(max_trace_length) - 2) { \
 		stop = ZEND_JIT_TRACE_STOP_TOO_LONG; \
 		break; \
 	}
@@ -604,6 +641,16 @@ zend_jit_trace_stop ZEND_FASTCALL zend_jit_trace_execute(zend_execute_data *ex, 
 		opline = save_opline;
 #endif
 		return ZEND_JIT_TRACE_STOP_EXCEPTION;
+	}
+
+	trace_flags = ZEND_OP_TRACE_INFO(opline, offset)->trace_flags;
+	if (trace_flags & ZEND_JIT_TRACE_UNSUPPORTED) {
+		TRACE_END(ZEND_JIT_TRACE_END, ZEND_JIT_TRACE_STOP_NOT_SUPPORTED, opline);
+#ifdef HAVE_GCC_GLOBAL_REGS
+		execute_data = save_execute_data;
+		opline = save_opline;
+#endif
+		return ZEND_JIT_TRACE_STOP_NOT_SUPPORTED;
 	}
 
 	if (prev_call) {

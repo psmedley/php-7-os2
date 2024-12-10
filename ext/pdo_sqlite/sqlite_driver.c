@@ -203,13 +203,9 @@ static bool sqlite_handle_preparer(pdo_dbh_t *dbh, zend_string *sql, pdo_stmt_t 
 static zend_long sqlite_handle_doer(pdo_dbh_t *dbh, const zend_string *sql)
 {
 	pdo_sqlite_db_handle *H = (pdo_sqlite_db_handle *)dbh->driver_data;
-	char *errmsg = NULL;
 
-	if (sqlite3_exec(H->db, ZSTR_VAL(sql), NULL, NULL, &errmsg) != SQLITE_OK) {
+	if (sqlite3_exec(H->db, ZSTR_VAL(sql), NULL, NULL, NULL) != SQLITE_OK) {
 		pdo_sqlite_error(dbh);
-		if (errmsg)
-			sqlite3_free(errmsg);
-
 		return -1;
 	} else {
 		return sqlite3_changes(H->db);
@@ -241,12 +237,9 @@ static zend_string* sqlite_handle_quoter(pdo_dbh_t *dbh, const zend_string *unqu
 static bool sqlite_handle_begin(pdo_dbh_t *dbh)
 {
 	pdo_sqlite_db_handle *H = (pdo_sqlite_db_handle *)dbh->driver_data;
-	char *errmsg = NULL;
 
-	if (sqlite3_exec(H->db, "BEGIN", NULL, NULL, &errmsg) != SQLITE_OK) {
+	if (sqlite3_exec(H->db, "BEGIN", NULL, NULL, NULL) != SQLITE_OK) {
 		pdo_sqlite_error(dbh);
-		if (errmsg)
-			sqlite3_free(errmsg);
 		return false;
 	}
 	return true;
@@ -255,12 +248,9 @@ static bool sqlite_handle_begin(pdo_dbh_t *dbh)
 static bool sqlite_handle_commit(pdo_dbh_t *dbh)
 {
 	pdo_sqlite_db_handle *H = (pdo_sqlite_db_handle *)dbh->driver_data;
-	char *errmsg = NULL;
 
-	if (sqlite3_exec(H->db, "COMMIT", NULL, NULL, &errmsg) != SQLITE_OK) {
+	if (sqlite3_exec(H->db, "COMMIT", NULL, NULL, NULL) != SQLITE_OK) {
 		pdo_sqlite_error(dbh);
-		if (errmsg)
-			sqlite3_free(errmsg);
 		return false;
 	}
 	return true;
@@ -269,12 +259,9 @@ static bool sqlite_handle_commit(pdo_dbh_t *dbh)
 static bool sqlite_handle_rollback(pdo_dbh_t *dbh)
 {
 	pdo_sqlite_db_handle *H = (pdo_sqlite_db_handle *)dbh->driver_data;
-	char *errmsg = NULL;
 
-	if (sqlite3_exec(H->db, "ROLLBACK", NULL, NULL, &errmsg) != SQLITE_OK) {
+	if (sqlite3_exec(H->db, "ROLLBACK", NULL, NULL, NULL) != SQLITE_OK) {
 		pdo_sqlite_error(dbh);
-		if (errmsg)
-			sqlite3_free(errmsg);
 		return false;
 	}
 	return true;
@@ -441,7 +428,6 @@ static int do_callback(struct pdo_sqlite_fci *fc, zval *cb,
 		 * the context */
 		if (agg_context) {
 			if (Z_ISUNDEF(retval)) {
-				zval_ptr_dtor(&agg_context->val);
 				return FAILURE;
 			}
 			zval_ptr_dtor(Z_REFVAL(agg_context->val));
@@ -751,7 +737,7 @@ static char *make_filename_safe(const char *filename)
 		}
 		return estrdup(filename);
 	}
-	if (*filename && memcmp(filename, ":memory:", sizeof(":memory:"))) {
+	if (*filename && strcmp(filename, ":memory:")) {
 		char *fullpath = expand_filepath(filename, NULL);
 
 		if (!fullpath) {
@@ -772,15 +758,6 @@ static int authorizer(void *autharg, int access_type, const char *arg3, const ch
 {
 	char *filename;
 	switch (access_type) {
-		case SQLITE_COPY: {
-			filename = make_filename_safe(arg4);
-			if (!filename) {
-				return SQLITE_DENY;
-			}
-			efree(filename);
-			return SQLITE_OK;
-		}
-
 		case SQLITE_ATTACH: {
 			filename = make_filename_safe(arg3);
 			if (!filename) {

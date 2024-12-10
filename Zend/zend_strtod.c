@@ -959,7 +959,7 @@ pow5mult
 {
 	Bigint *b1, *p5, *p51;
 	int i;
-	static int p05[3] = { 5, 25, 125 };
+	static const int p05[3] = { 5, 25, 125 };
 
 	if ((i = k & 3))
 		b = multadd(b, p05[i-1], 0);
@@ -3613,11 +3613,11 @@ rv_alloc(i) int i;
 rv_alloc(int i)
 #endif
 {
-	int j, k, *r;
+	int k, *r;
 
-	j = sizeof(ULong);
+	size_t j = sizeof(ULong);
 	for(k = 0;
-		sizeof(Bigint) - sizeof(ULong) - sizeof(int) + (size_t)j <= (size_t)i;
+		sizeof(Bigint) - sizeof(ULong) - sizeof(int) + j <= (size_t)i;
 		j <<= 1)
 			k++;
 	r = (int*)Balloc(k);

@@ -49,7 +49,7 @@
 # define EWOULDBLOCK EAGAIN
 #endif
 
-/* This is a work around for GCC bug 69602: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69602 */
+/* This is a workaround for GCC bug 69602: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69602 */
 #if EAGAIN != EWOULDBLOCK
 # define PHP_IS_TRANSIENT_ERROR(err) (err == EAGAIN || err == EWOULDBLOCK)
 #else
@@ -162,7 +162,7 @@ PHPAPI int php_poll2(php_pollfd *ufds, unsigned int nfds, int timeout);
 /* timeval-to-timeout (for poll(2)) */
 static inline int php_tvtoto(struct timeval *timeouttv)
 {
-	if (timeouttv) {
+	if (timeouttv && timeouttv->tv_sec >= 0 && timeouttv->tv_sec <= ((INT_MAX - 1000) / 1000)) {
 		return (timeouttv->tv_sec * 1000) + (timeouttv->tv_usec / 1000);
 	}
 	return -1;

@@ -125,8 +125,11 @@ static void dom_xpath_ext_function_php(xmlXPathParserContextPtr ctxt, int nargs,
 					}
 				}
 				break;
-			default:
-			ZVAL_STRING(&fci.params[i], (char *)xmlXPathCastToString(obj));
+			default: {
+				str = (char *)xmlXPathCastToString(obj);
+				ZVAL_STRING(&fci.params[i], str);
+				xmlFree(str);
+			}
 		}
 		xmlXPathFreeObject(obj);
 	}
@@ -259,6 +262,11 @@ int dom_xpath_document_read(dom_object *obj, zval *retval)
 
 	if (ctx) {
 		docp = (xmlDocPtr) ctx->doc;
+	}
+
+	if (UNEXPECTED(!docp)) {
+		php_dom_throw_error(INVALID_STATE_ERR, /* strict */ true);
+		return FAILURE;
 	}
 
 	php_dom_create_object((xmlNodePtr) docp, retval, obj);

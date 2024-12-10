@@ -393,9 +393,7 @@ PHP_FUNCTION(bzopen)
 					RETURN_FALSE;
 				}
 				break;
-			default:
-				/* not reachable */
-				break;
+			EMPTY_SWITCH_DEFAULT_CASE();
 		}
 
 		if (FAILURE == php_stream_cast(stream, PHP_STREAM_AS_FD, (void *) &fd, REPORT_ERRORS)) {
@@ -406,7 +404,7 @@ PHP_FUNCTION(bzopen)
 
 		stream = php_stream_bz2open_from_BZFILE(bz, mode, stream);
 	} else {
-		zend_argument_type_error(1, "must be of type string or file-resource, %s given", zend_zval_type_name(file));
+		zend_argument_type_error(1, "must be of type string or file-resource, %s given", zend_zval_value_name(file));
 		RETURN_THROWS();
 	}
 

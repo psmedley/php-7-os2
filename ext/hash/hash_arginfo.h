@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 66d99527cf6d7b37ff652bb78fa57d5e3d5c78d9 */
+ * Stub hash: f4531ebc6817042a2729c3dd1502631656c29f05 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hash, 0, 2, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, algo, IS_STRING, 0)
@@ -180,8 +180,8 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_FE(hash_update_file, arginfo_hash_update_file)
 	ZEND_FE(hash_final, arginfo_hash_final)
 	ZEND_FE(hash_copy, arginfo_hash_copy)
-	ZEND_FE(hash_algos, arginfo_hash_algos)
-	ZEND_FE(hash_hmac_algos, arginfo_hash_hmac_algos)
+	ZEND_SUPPORTS_COMPILE_TIME_EVAL_FE(hash_algos, arginfo_hash_algos)
+	ZEND_SUPPORTS_COMPILE_TIME_EVAL_FE(hash_hmac_algos, arginfo_hash_hmac_algos)
 	ZEND_FE(hash_pbkdf2, arginfo_hash_pbkdf2)
 	ZEND_FE(hash_equals, arginfo_hash_equals)
 	ZEND_FE(hash_hkdf, arginfo_hash_hkdf)
@@ -210,6 +210,26 @@ static const zend_function_entry class_HashContext_methods[] = {
 	ZEND_ME(HashContext, __unserialize, arginfo_class_HashContext___unserialize, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
+
+static void register_hash_symbols(int module_number)
+{
+	REGISTER_LONG_CONSTANT("HASH_HMAC", PHP_HASH_HMAC, CONST_PERSISTENT);
+
+
+	zend_add_parameter_attribute(zend_hash_str_find_ptr(CG(function_table), "hash_hmac", sizeof("hash_hmac") - 1), 2, ZSTR_KNOWN(ZEND_STR_SENSITIVEPARAMETER), 0);
+
+	zend_add_parameter_attribute(zend_hash_str_find_ptr(CG(function_table), "hash_hmac_file", sizeof("hash_hmac_file") - 1), 2, ZSTR_KNOWN(ZEND_STR_SENSITIVEPARAMETER), 0);
+
+	zend_add_parameter_attribute(zend_hash_str_find_ptr(CG(function_table), "hash_init", sizeof("hash_init") - 1), 2, ZSTR_KNOWN(ZEND_STR_SENSITIVEPARAMETER), 0);
+
+	zend_add_parameter_attribute(zend_hash_str_find_ptr(CG(function_table), "hash_pbkdf2", sizeof("hash_pbkdf2") - 1), 1, ZSTR_KNOWN(ZEND_STR_SENSITIVEPARAMETER), 0);
+
+	zend_add_parameter_attribute(zend_hash_str_find_ptr(CG(function_table), "hash_equals", sizeof("hash_equals") - 1), 0, ZSTR_KNOWN(ZEND_STR_SENSITIVEPARAMETER), 0);
+
+	zend_add_parameter_attribute(zend_hash_str_find_ptr(CG(function_table), "hash_equals", sizeof("hash_equals") - 1), 1, ZSTR_KNOWN(ZEND_STR_SENSITIVEPARAMETER), 0);
+
+	zend_add_parameter_attribute(zend_hash_str_find_ptr(CG(function_table), "hash_hkdf", sizeof("hash_hkdf") - 1), 1, ZSTR_KNOWN(ZEND_STR_SENSITIVEPARAMETER), 0);
+}
 
 static zend_class_entry *register_class_HashContext(void)
 {

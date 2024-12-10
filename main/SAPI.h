@@ -242,7 +242,7 @@ struct _sapi_module_struct {
 
 	void (*register_server_variables)(zval *track_vars_array);
 	void (*log_message)(const char *message, int syslog_type_int);
-	double (*get_request_time)(void);
+	zend_result (*get_request_time)(double *request_time);
 	void (*terminate_process)(void);
 
 	char *php_ini_path_override;
@@ -266,7 +266,7 @@ struct _sapi_module_struct {
 	void (*ini_defaults)(HashTable *configuration_hash);
 	int phpinfo_as_text;
 
-	char *ini_entries;
+	const char *ini_entries;
 	const zend_function_entry *additional_functions;
 	unsigned int (*input_filter_init)(void);
 };

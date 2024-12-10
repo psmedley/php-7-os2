@@ -652,8 +652,11 @@ MYSQLND_METHOD(mysqlnd_stmt, send_execute)(MYSQLND_STMT * const s, const enum_my
 		  Executed, but the user hasn't started to fetch
 		  This will clean also the metadata, but after the EXECUTE call we will
 		  have it again.
+		  stmt->result may be freed and nullified by free_stmt_result, transitively called from flush.
 		*/
-		stmt->result->m.free_result_buffers(stmt->result);
+		if (stmt->result) {
+			stmt->result->m.free_result_buffers(stmt->result);
+		}
 
 		stmt->state = MYSQLND_STMT_PREPARED;
 	} else if (stmt->state < MYSQLND_STMT_PREPARED) {
@@ -1315,7 +1318,7 @@ MYSQLND_METHOD(mysqlnd_stmt, bind_one_result)(MYSQLND_STMT * const s, unsigned i
 	MYSQLND_STMT_DATA * stmt = s? s->data : NULL;
 	MYSQLND_CONN_DATA * conn = stmt? stmt->conn : NULL;
 
-	DBG_ENTER("mysqlnd_stmt::bind_result");
+	DBG_ENTER("mysqlnd_stmt::bind_one_result");
 	if (!stmt || !conn) {
 		DBG_RETURN(FAIL);
 	}
@@ -1578,7 +1581,7 @@ MYSQLND_METHOD(mysqlnd_stmt, attr_get)(const MYSQLND_STMT * const s,
 									   void * const value)
 {
 	MYSQLND_STMT_DATA * stmt = s? s->data : NULL;
-	DBG_ENTER("mysqlnd_stmt::attr_set");
+	DBG_ENTER("mysqlnd_stmt::attr_get");
 	if (!stmt) {
 		DBG_RETURN(FAIL);
 	}
@@ -1978,7 +1981,7 @@ MYSQLND_CLASS_METHODS_END;
 
 
 /* {{{ _mysqlnd_init_ps_subsystem */
-void _mysqlnd_init_ps_subsystem()
+void _mysqlnd_init_ps_subsystem(void)
 {
 	mysqlnd_stmt_set_methods(&MYSQLND_CLASS_METHOD_TABLE_NAME(mysqlnd_stmt));
 	_mysqlnd_init_ps_fetch_subsystem();

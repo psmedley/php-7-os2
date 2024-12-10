@@ -43,7 +43,7 @@
 #include "php_standard.h"
 
 #include <sys/types.h>
-#if HAVE_SYS_SOCKET_H
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
 
@@ -52,7 +52,7 @@
 #else
 #include <netinet/in.h>
 #include <netdb.h>
-#if HAVE_ARPA_INET_H
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
 #endif
@@ -160,6 +160,7 @@ static php_stream *php_stream_url_wrap_http_ex(php_stream_wrapper *wrapper,
 		return NULL;
 	}
 
+	ZEND_ASSERT(resource->scheme);
 	if (!zend_string_equals_literal_ci(resource->scheme, "http") &&
 		!zend_string_equals_literal_ci(resource->scheme, "https")) {
 		if (!context ||
@@ -188,7 +189,7 @@ static php_stream *php_stream_url_wrap_http_ex(php_stream_wrapper *wrapper,
 			request_fulluri = zend_is_true(tmpzval);
 		}
 
-		use_ssl = resource->scheme && (ZSTR_LEN(resource->scheme) > 4) && ZSTR_VAL(resource->scheme)[4] == 's';
+		use_ssl = (ZSTR_LEN(resource->scheme) > 4) && ZSTR_VAL(resource->scheme)[4] == 's';
 		/* choose default ports */
 		if (use_ssl && resource->port == 0)
 			resource->port = 443;
@@ -575,7 +576,7 @@ finish:
 	 * interprets the RFC literally and establishes a keep-alive connection,
 	 * unless the user specifically requests something else by specifying a
 	 * Connection header in the context options. Send that header even for
-	 * HTTP/1.0 to avoid issues when the server respond with a HTTP/1.1
+	 * HTTP/1.0 to avoid issues when the server respond with an HTTP/1.1
 	 * keep-alive response, which is the preferred response type. */
 	if ((have_header & HTTP_HEADER_CONNECTION) == 0) {
 		smart_str_appends(&req_buf, "Connection: close\r\n");
@@ -797,8 +798,19 @@ finish:
 			} else if (!strncasecmp(http_header_line, "Content-Type:", sizeof("Content-Type:")-1)) {
 				php_stream_notify_info(context, PHP_STREAM_NOTIFY_MIME_TYPE_IS, http_header_value, 0);
 			} else if (!strncasecmp(http_header_line, "Content-Length:", sizeof("Content-Length:")-1)) {
-				file_size = atoi(http_header_value);
-				php_stream_notify_file_size(context, file_size, http_header_line, 0);
+				/* https://www.rfc-editor.org/rfc/rfc9110.html#name-content-length */
+				const char *ptr = http_header_value;
+				/* must contain only digits, no + or - symbols */
+				if (*ptr >= '0' && *ptr <= '9') {
+					char *endptr = NULL;
+					size_t parsed = ZEND_STRTOUL(ptr, &endptr, 10);
+					/* check whether there was no garbage in the header value and the conversion was successful */
+					if (endptr && !*endptr) {
+						/* truncate for 32-bit such that no negative file sizes occur */
+						file_size = MIN(parsed, ZEND_LONG_MAX);
+						php_stream_notify_file_size(context, file_size, http_header_line, 0);
+					}
+				}
 			} else if (
 				!strncasecmp(http_header_line, "Transfer-Encoding:", sizeof("Transfer-Encoding:")-1)
 				&& !strncasecmp(http_header_value, "Chunked", sizeof("Chunked")-1)
@@ -865,7 +877,7 @@ finish:
 							s = ZSTR_VAL(resource->path);
 							if (!ZSTR_LEN(resource->path)) {
 								zend_string_release_ex(resource->path, 0);
-								resource->path = zend_string_init("/", 1, 0);
+								resource->path = ZSTR_INIT_LITERAL("/", 0);
 								s = ZSTR_VAL(resource->path);
 							} else {
 								*s = '/';

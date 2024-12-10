@@ -361,20 +361,20 @@ MYSQLND_METHOD(mysqlnd_conn_data, set_server_option)(MYSQLND_CONN_DATA * const c
 
 
 /* {{{ mysqlnd_conn_data::restart_psession */
-static enum_func_status
+static void
 MYSQLND_METHOD(mysqlnd_conn_data, restart_psession)(MYSQLND_CONN_DATA * conn)
 {
 	DBG_ENTER("mysqlnd_conn_data::restart_psession");
 	MYSQLND_INC_CONN_STATISTIC(conn->stats, STAT_CONNECT_REUSED);
 	conn->current_result = NULL;
 	conn->last_message.s = NULL;
-	DBG_RETURN(PASS);
+	DBG_VOID_RETURN;
 }
 /* }}} */
 
 
 /* {{{ mysqlnd_conn_data::end_psession */
-static enum_func_status
+static void
 MYSQLND_METHOD(mysqlnd_conn_data, end_psession)(MYSQLND_CONN_DATA * conn)
 {
 	DBG_ENTER("mysqlnd_conn_data::end_psession");
@@ -385,7 +385,7 @@ MYSQLND_METHOD(mysqlnd_conn_data, end_psession)(MYSQLND_CONN_DATA * conn)
 	}
 	mysqlnd_set_string(&conn->last_message, NULL, 0);
 	conn->error_info = &conn->error_info_impl;
-	DBG_RETURN(PASS);
+	DBG_VOID_RETURN;
 }
 /* }}} */
 
@@ -503,9 +503,8 @@ MYSQLND_METHOD(mysqlnd_conn_data, connect_handshake)(MYSQLND_CONN_DATA * conn,
 	enum_func_status ret = FAIL;
 	DBG_ENTER("mysqlnd_conn_data::connect_handshake");
 
-	if (PASS == conn->vio->data->m.connect(conn->vio, *scheme, conn->persistent, conn->stats, conn->error_info) &&
-		PASS == conn->protocol_frame_codec->data->m.reset(conn->protocol_frame_codec, conn->stats, conn->error_info))
-	{
+	if (PASS == conn->vio->data->m.connect(conn->vio, *scheme, conn->persistent, conn->stats, conn->error_info)) {
+		conn->protocol_frame_codec->data->m.reset(conn->protocol_frame_codec, conn->stats, conn->error_info);
 		size_t client_flags = mysql_flags;
 
 		ret = conn->command->handshake(conn, *username, *password, *database, client_flags);
@@ -1043,17 +1042,6 @@ MYSQLND_METHOD(mysqlnd_conn_data, refresh)(MYSQLND_CONN_DATA * const conn, uint8
 	DBG_ENTER("mysqlnd_conn_data::refresh");
 	DBG_INF_FMT("conn=%" PRIu64 " options=%u", conn->thread_id, options);
 	DBG_RETURN(conn->command->refresh(conn, options));
-}
-/* }}} */
-
-
-/* {{{ mysqlnd_conn_data::shutdown */
-static enum_func_status
-MYSQLND_METHOD(mysqlnd_conn_data, shutdown)(MYSQLND_CONN_DATA * const conn, uint8_t level)
-{
-	DBG_ENTER("mysqlnd_conn_data::shutdown");
-	DBG_INF_FMT("conn=%" PRIu64 " level=%u", conn->thread_id, level);
-	DBG_RETURN(conn->command->shutdown(conn, level));
 }
 /* }}} */
 
@@ -1956,7 +1944,6 @@ MYSQLND_CLASS_METHODS_START(mysqlnd_conn_data)
 
 	MYSQLND_METHOD(mysqlnd_conn_data, stmt_init),
 
-	MYSQLND_METHOD(mysqlnd_conn_data, shutdown),
 	MYSQLND_METHOD(mysqlnd_conn_data, refresh),
 
 	MYSQLND_METHOD(mysqlnd_conn_data, ping),

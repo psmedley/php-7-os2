@@ -199,7 +199,7 @@ MYSQLND_METHOD(mysqlnd_object_factory, get_prepared_statement)(MYSQLND_CONN_DATA
 	mysqlnd_upsert_status_init(&stmt->upsert_status_impl);
 	stmt->upsert_status = &(stmt->upsert_status_impl);
 	stmt->state = MYSQLND_STMT_INITTED;
-	stmt->execute_cmd_buffer.length = 4096;
+	stmt->execute_cmd_buffer.length = MYSQLND_NET_CMD_BUFFER_MIN_SIZE;
 	stmt->execute_cmd_buffer.buffer = mnd_emalloc(stmt->execute_cmd_buffer.length);
 	stmt->prefetch_rows = MYSQLND_DEFAULT_PREFETCH_ROWS;
 
@@ -230,10 +230,7 @@ MYSQLND_METHOD(mysqlnd_object_factory, get_pfc)(const bool persistent, MYSQLND_S
 		pfc->persistent = pfc->data->persistent = persistent;
 		pfc->data->m = *mysqlnd_pfc_get_methods();
 
-		if (PASS != pfc->data->m.init(pfc, stats, error_info)) {
-			pfc->data->m.dtor(pfc, stats, error_info);
-			pfc = NULL;
-		}
+		pfc->data->m.init(pfc, stats, error_info);
 	}
 	DBG_RETURN(pfc);
 }
@@ -255,10 +252,7 @@ MYSQLND_METHOD(mysqlnd_object_factory, get_vio)(const bool persistent, MYSQLND_S
 		vio->persistent = vio->data->persistent = persistent;
 		vio->data->m = *mysqlnd_vio_get_methods();
 
-		if (PASS != vio->data->m.init(vio, stats, error_info)) {
-			vio->data->m.dtor(vio, stats, error_info);
-			vio = NULL;
-		}
+		vio->data->m.init(vio, stats, error_info);
 	}
 	DBG_RETURN(vio);
 }

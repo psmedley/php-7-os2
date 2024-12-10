@@ -72,7 +72,9 @@
  * SIO stdio-replacement strx_* functions by Panos Tsirigotis
  * <panos@alumni.cs.colorado.edu> for xinetd.
  */
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE
+#endif
 #include "php.h"
 
 #include <stddef.h>
@@ -172,13 +174,6 @@
 } while (0)
 
 /* }}} */
-
-#if !HAVE_STRNLEN
-static size_t strnlen(const char *s, size_t maxlen) {
-	char *r = memchr(s, '\0', maxlen);
-	return r ? r-s : maxlen;
-}
-#endif
 
 /*
  * Do format conversion placing the output in buffer
@@ -550,7 +545,7 @@ static void xbuf_format_converter(void *xbuf, bool is_char, const char *fmt, va_
 						if (!adjust_precision) {
 							s_len = strlen(s);
 						} else {
-							s_len = strnlen(s, precision);
+							s_len = zend_strnlen(s, precision);
 						}
 					} else {
 						s = S_NULL;

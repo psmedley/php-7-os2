@@ -1,134 +1,170 @@
-PHP 8.1 INTERNALS UPGRADE NOTES
+PHP 8.3 INTERNALS UPGRADE NOTES
 
 1. Internal API changes
-  a. Removed Zend APIs
-  b. Zend Stream API
-  c. zend_get_opcode_id()
-  d. Removed support for "p" printf format specifier
-  e. ZEND_ATOL() changes
-  f. Non-serializable classes should use ZEND_ACC_NOT_SERIALIZABLE
-  g. _zend_hash_find_known_hash renamed to zend_hash_find_known_hash
-  h. Renaming of ZEND_TYPE_HAS_CLASS() into ZEND_TYPE_IS_COMPLEX()
-  i. zend_resource handle is now zend_long
 
 2. Build system changes
-  a. New compiler flags
 
 3. Module changes
-  a. ext/hash
-  b. ext/pdo
-  c. ext/standard
-  d. ext/pgsql
-  e. ext/pcre
+
+4. OpCode changes
+
+5. SAPI changes
 
 ========================
 1. Internal API changes
 ========================
-  a. The following APIs have been removed from the Zend Engine:
-     - The spl_ce_Aggregate, spl_ce_ArrayAccess, spl_ce_Countable, spl_ce_Iterator, spl_ce_Serializable,
-       spl_ce_Stringable, spl_ce_Traversable alias class entries have been removed in favor of zend_ce_aggregate,
-       zend_ce_arrayaccess, zend_ce_countable, zend_ce_iterator, zend_ce_serializable, zend_ce_stringable,
-       zend_ce_traversable.
-     - The ZVAL_NEW_ARR() macro has been removed. Use array_init() or ZVAL_ARR
-       with zend_new_array() instead.
-     - The IGNORE_URL_WIN macro has been removed; it had no effect as of PHP 5.0.0.
-     - TsHashTable has been removed, it was not used in php-src and was not useful outside of php-src.
-  b. Zend Stream API has been changed to use "zend_string*" instead of "char*"
-      - zend_file_handle.filename now is zend_string*
-      - zend_file_handle.free_filename is removed. Now zend_file_handle.filename is always released.
-      - added zend_file_handle.primary_script flag. SAPIs should set it for main executed script.
-      - added zend_file_handle.in_list flag, which is set when a file_handle is added into CG(open_files)
-      - added zend_stream_init_filename_ex() function, that takes filename as zend_string*
-      - the "filename" parameter of functons zend_stream_open(), php_stream_open_for_zend_ex() and
-        callback zend_stream_open_function() has been removed (it's now passed as a "filename" field of the
-        file_handle parameter)
-      - in zend_fopen() and zend_resolve_path() callbacks filename now passed as zend_string*
-      - file_handles should be destroyed by zend_destroy_file_handle() function (usually in the same function
-        the same function where they were created by zend_stream_init_*()). Previously there were two different
-        destructors zend_destroy_file_handle() and zend_file_handle_dtor().
-      - zend_ini_scanner_globals.filename now is zend_string*
-  c. Added the zend_get_opcode_id() function, which is intended to get opcode id from name.
-  d. Removed support for "p" modifier (%pd, %pu, etc) in PHP's printf
-     implementations. Use ZEND_LONG_FMT and ZEND_ULONG_FMT instead.
-  e. ZEND_ATOL() now returns the integer instead of assigning it as part of the
-     macro. Replace ZEND_ATOL(i, s) with i = ZEND_ATOL(s).
-  f. Non-serializable classes should be indicated using the
-     ZEND_ACC_NOT_SERIALIZABLE (@not-serializable in stubs) rather than the
-     zend_class_(un)serialize_deny handlers which are removed.
-  g. _zend_hash_find_known_hash has been renamed to zend_hash_find_known_hash.
-  h. ZEND_TYPE_HAS_CLASS() has been renamed to ZEND_TYPE_IS_COMPLEX() for clarity.
-     A zend_type element can contain a zend_type_list which might be either a union or an intersection,
-     or a single class stored as either a zend_string* or a zend_class_entry*.
-  i. The handle member of zend_resource (the resource ID) now has type zend_long
-     rather than int. This should be transparent to most code, but uses in
-     printf may need to switch from "%d" to ZEND_LONG_FMT.
+
+* zend_class_entry now possesses a default_object_handlers field, which
+  provides a default object handler when create_object() is not overriding it.
+* Custom Fiber implementations have to initialize EG(stack_limit) and
+  EG(stack_base).
+* EG(opline_before_exception) may now be null if the VM throws an exception
+  before executing any opline.
+* Many C header files have been cleaned up and include dependencies
+  have been reduced.  Many headers which used to be always included by
+  Zend headers (e.g. "errno.h") are no longer implied, and this may
+  break the build of third-party extensions which relied on this
+  implementation detail.  Those extensions may need to add the missing
+  #include lines.
+* Since version 8, PHP requires a C99 compiler.  Configure-time checks
+  for C99 features have been removed and therefore macro definitions
+  from php_config.h have disappeared.  Do not use those feature
+  macros.
+* Internal class aliases created during request time can now exist in
+  the class table. zend_register_class_alias_ex() will not increase
+  the refcount for class aliases and the cleanup function takes this
+  into account.
+* The return types of the following functions have been changed from
+  `bool` to `zend_result`:
+  - zend_fiber_init_context()
+* The fast_add_function() has been removed, use add_function() that will
+  call the static inline add_function_fast() instead.
+* The order of members of zend_op_array, zend_ssa_var, zend_ssa_var_info,
+  zend_executor_globals and php_core_globals have changed to improve
+  struct packing which reduces their size.
+* Many calls to zend_assign_to_variable have been replaced with
+  zend_assign_to_variable_ex which allows delaying the releasing of the old
+  variable value. This avoids side-effects through destructors between the
+  assignment of the variable and the assignment to the result zval in the VM
+  (i.e. it may free the new value). See GH-10168 for details.
+* The return types of the following functions were changed from int to
+  zend_result:
+  - open_file_for_scanning
+  - php_rfc1867_callback
+  - virtual_chdir
+  - zend_execute_scripts
+  - zend_get_module_started
+  - zend_handle_undef_args
+  - zend_list_delete
+  - zend_multibyte_parse_encoding_list
+  - zend_multibyte_set_internal_encoding
+  - zend_parse_ini_file
+  - zend_parse_ini_string
+  - zend_set_user_opcode_handler
+  - zend_ssa_inference
+* Removed unused macros PHP_FNV1_32A_INIT and PHP_FNV1A_64_INIT. See GH-11114.
+* ext/standard/hrtime.h was moved to Zend/zend_hrtime.h
+  * The prefix of the PHP_HRTIME_ macros was changed to ZEND_HRTIME_
+  * The HRTIME_AVAILABLE macro was renamed to ZEND_HRTIME_AVAILABLE
+  * The php_hrtime_current() function was renamed to zend_hrtime()
+* _php_stream_dirent now has an extra d_type field that is used to store the
+  directory entry type. This can be used to avoid additional stat calls for
+  types when the type is already known.
+* The misspelled ZEND_CGG_DIAGNOSTIC_IGNORED_(START|END) macros are deprecated.
+  Use ZEND_DIAGNOSTIC_IGNORED_(START|END) instead. These macros now also support
+  Clang.
 
 ========================
 2. Build system changes
 ========================
-  a. New compiler flags
-     - [-Wimplicit-fallthrough=1] is now enabled by default.
-       It is possible to use the new ZEND_FALLTHROUGH macro keyword to suppress the warning.
+
+* PHP_EXTRA_VERSION can be passed to configure script to control custom PHP
+  build versions: ./configure PHP_EXTRA_VERSION="-acme"
+
+* LDFLAGS are not unset anymore allowing them to be adjusted e.g.
+  LDFLAGS="..." ./configure
+
+* Removed the HAVE_DEV_URANDOM compile time check.  HAVE_DEV_URANDOM will
+  now never be defined. Any checks relying on HAVE_DEV_URANDOM should be
+  removed.  Even with HAVE_DEV_URANDOM it was not guaranteed that
+  /dev/urandom is actually available at run time and thus a runtime
+  check needs to happen in all cases.
+
 ========================
 3. Module changes
 ========================
 
-  a. ext/hash
-    - The init signatures are extended with an additional `HashTable*`
-      argument. The passed HT is to contain the algorithm specific
-      configuration. If an algorithm doesn't make use of any additional
-      configuration, the argument is to be marked with ZEND_ATTRIBUTE_UNUSED.
+ a. ext/json
+   - A new function php_json_validate_ex has been added to check if the
+     provided C string is valid for the given depth and options.
 
-  b. ext/pdo
-    - The "preparer" callback now accepts a zend_string* instead of
-      char* + size_t pair the query string. Similarly, the query_string and
-      active_query_string members of pdo_stmt_t are now zend_string*.
-    - The way in which drivers provide results has changed: Previously,
-      the "describer" callback populated the "pdo_type" member in the
-      pdo_column_data structure, and the "get_col" callback then had to return
-      pointers to data of appropriate type.
+ b. ext/standard
+   - The PHPAPI php_url_encode_hash_ex() function has had its signature change
+     from:
+     PHPAPI void php_url_encode_hash_ex(HashTable *ht, smart_str *formstr,
+     				const char *num_prefix, size_t num_prefix_len,
+     				const char *key_prefix, size_t key_prefix_len,
+     				const char *key_suffix, size_t key_suffix_len,
+     				zval *type, const char *arg_sep, int enc_type);
+     to:
+     PHPAPI void php_url_encode_hash_ex(HashTable *ht, smart_str *formstr,
+     				const char *num_prefix, size_t num_prefix_len,
+     				const zend_string *key_prefix,
+     				zval *type, const zend_string *arg_sep, int enc_type);
+     The change to use zend_string prevent the computation of the arg_sep
+     length at each call. The key_suffix parameter was dropped as it was a
+     constant value and depended on the key_prefix parameter to not be NULL.
 
-      In PHP 8.1, the "describer" callback no longer determines the pdo_type
-      (and this member has been removed from pdo_column_data). Instead, the
-      "get_col" callback accepts a zval pointer that may be populated with a
-      value of arbitrary type. This gives drivers more flexibility in
-      determining result types (e.g. based on whether a specific integer fits
-      the PHP integer type) and avoid awkward juggling of temporary buffers.
+ c. ext/mysqlnd
+   - The function mysqlnd_shutdown and its corresponding internal methods
+   mysqlnd_command::shutdown & mysqlnd_conn_data::shutdown have been removed.
+   These functions are deprecated by MySQL in favour of SHUTDOWN SQL statement.
 
-      As the "describer" no longer determines pdo_type, the "get_column_meta"
-      function is now responsible for providing this information for use by
-      getColumnMeta(). The type provided here does not need to match the type
-      returned by get_col (in fact no corresponding type might exist, e.g. for
-      floats). It should be the closest logical equivalent for the column type.
-    - The transaction, set_attribute, and preparer handler's return type
-      has been formalized to bool instead of int.
-    - The check_liveness handler's return type has been formalized to zend_return
-      instead of int.
-    - The closer, and fetch_error handlers have been voidified.
-    - The quoter handler now returns the quoted string as zend_string* instead
-      of returning a boolean, and the quoted string as a pair of out params.
-      Similarly the unquoted string is now a zend_string* instead of a pair of
-      char* and size_t length.
-    - The doer handler now accepts a zend_string* instead of char* + size_t
-      pair for the SQL statement.
-    - The last_id handler now returns a zend_string* instead of returning a
-      char* and the length as an out param, and accepts a zend_string* instead
-      of char* for the optional sequence/table name.
-    - The php_pdo_str_tolower_dup() PDO_API has been removed use zend_str_tolower_dup()
-      or zend_string_tolower_ex().
+ d. ext/pcre
+   - The function pcre_get_compiled_regex_ex has been removed.
+   Use pcre_get_compiled_regex instead.
 
-  c. ext/standard
-    - The PHP API php_fputcsv() now takes an extra zend_string* argument at the end
-      for a custom EOL sequence, passing NULL provides the old default of "\n".
+ e. ext/spl
+   - The PHPAPI spl_iterator_apply() function now returns zend_result instead of int.
+     There are no functional changes.
+   - The field _spl_filesystem_object->is_recursive has been removed.
 
-  d. ext/pgsql
-    - The functions php_pgsql_meta_data(), php_pgsql_convert(), php_pgsql_insert(),
-      php_pgsql_update(), php_pgsql_delete(), and php_pgsql_select() have had
-      their return type formalized to zend_result.
-    - The functions php_pgsql_meta_data(), php_pgsql_convert(), php_pgsql_insert(),
-      php_pgsql_update(), php_pgsql_delete(), and php_pgsql_select() now accept a
-      zend_string* instead of a char* for the table name.
+ f. ext/dom
+   - A new function dom_get_doc_props_read_only() is added to gather the document
+     properties in a read-only way. This function avoids allocation when there are
+     no document properties changed yet.
+   - The node list returned by DOMNode::getElementsByTagName() and
+	   DOMNode::getElementsByTagNameNS() now caches the length and the last requested item.
+	   This means that the length and the last requested item are not recalculated
+	   when the node list is iterated over multiple times.
+	   If you do not use the internal PHP dom APIs to modify the document, you need to
+	   manually invalidate the cache using php_libxml_invalidate_node_list_cache_from_doc().
+	   Furthermore, the following internal APIs were added to handle the cache:
+	     . php_dom_is_cache_tag_stale_from_doc_ptr()
+	     . php_dom_is_cache_tag_stale_from_node()
+	     . php_dom_mark_cache_tag_up_to_date_from_node()
+   - The function dom_get_elements_by_tag_name_ns_raw() has an additional parameter to indicate
+     the base node of the node list. This function also no longer accepts -1 as the index argument.
+   - The function dom_namednode_iter() has additional arguments to avoid recomputing the length of
+     the strings.
+   - The functions dom_parent_node_prepend(), dom_parent_node_append(), dom_parent_node_after(), and
+     dom_parent_node_before() now use an uint32_t argument for the number of nodes instead of int.
+   - There is now a helper function php_dom_get_content_into_zval() to get the contents of a node.
+     This avoids allocation if possible.
+   - The function dom_set_old_ns() has been moved into ext/libxml as php_libxml_set_old_ns() and
+     is now publicly exposed as an API.
 
-  e. ext/pcre
-    - Bundled PCRE2 is at version 10.37. The most important diff to the previous
-      version is the JIT support on the S390 platform.
+ g. ext/libxml
+   - Two new functions: php_libxml_invalidate_node_list_cache_from_doc() and
+     php_libxml_invalidate_node_list_cache() were added to invalidate the cache of a node list.
+
+========================
+4. OpCode changes
+========================
+
+========================
+5. SAPI changes
+========================
+
+* SAPIs that may execute in alternative stacks have to set EG(stack_limit) and
+  EG(stack_base)

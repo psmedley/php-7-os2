@@ -153,12 +153,13 @@ again:
 				php_printf("%senum(%s::%s)\n", COMMON, ZSTR_VAL(ce->name), Z_STRVAL_P(case_name_zval));
 				return;
 			}
-
-			if (Z_IS_RECURSIVE_P(struc)) {
+			zend_object *zobj = Z_OBJ_P(struc);
+			uint32_t *guard = zend_get_recursion_guard(zobj);
+			if (ZEND_GUARD_OR_GC_IS_RECURSIVE(guard, DEBUG, zobj)) {
 				PUTS("*RECURSION*\n");
 				return;
 			}
-			Z_PROTECT_RECURSION_P(struc);
+			ZEND_GUARD_OR_GC_PROTECT_RECURSION(guard, DEBUG, zobj);
 
 			myht = zend_get_properties_for(struc, ZEND_PROP_PURPOSE_DEBUG);
 			class_name = Z_OBJ_HANDLER_P(struc, get_class_name)(Z_OBJ_P(struc));
@@ -190,7 +191,7 @@ again:
 				php_printf("%*c", level-1, ' ');
 			}
 			PUTS("}\n");
-			Z_UNPROTECT_RECURSION_P(struc);
+			ZEND_GUARD_OR_GC_UNPROTECT_RECURSION(guard, DEBUG, zobj);
 			break;
 		}
 		case IS_RESOURCE: {
@@ -342,16 +343,20 @@ PHPAPI void php_debug_zval_dump(zval *struc, int level) /* {{{ */
 		}
 		PUTS("}\n");
 		break;
-	case IS_OBJECT:
-		myht = zend_get_properties_for(struc, ZEND_PROP_PURPOSE_DEBUG);
-		if (myht) {
-			if (GC_IS_RECURSIVE(myht)) {
-				PUTS("*RECURSION*\n");
-				zend_release_properties(myht);
-				return;
-			}
-			GC_PROTECT_RECURSION(myht);
+	case IS_OBJECT: {
+		/* Check if this is already recursing on the object before calling zend_get_properties_for,
+		 * to allow infinite recursion detection to work even if classes return temporary arrays,
+		 * and to avoid the need to update the properties table in place to reflect the state
+		 * if the result won't be used. (https://github.com/php/php-src/issues/8044) */
+		zend_object *zobj = Z_OBJ_P(struc);
+		uint32_t *guard = zend_get_recursion_guard(zobj);
+		if (ZEND_GUARD_OR_GC_IS_RECURSIVE(guard, DEBUG, zobj)) {
+			PUTS("*RECURSION*\n");
+			return;
 		}
+		ZEND_GUARD_OR_GC_PROTECT_RECURSION(guard, DEBUG, zobj);
+
+		myht = zend_get_properties_for(struc, ZEND_PROP_PURPOSE_DEBUG);
 		class_name = Z_OBJ_HANDLER_P(struc, get_class_name)(Z_OBJ_P(struc));
 		php_printf("object(%s)#%d (%d) refcount(%u){\n", ZSTR_VAL(class_name), Z_OBJ_HANDLE_P(struc), myht ? zend_array_count(myht) : 0, Z_REFCOUNT_P(struc));
 		zend_string_release_ex(class_name, 0);
@@ -370,14 +375,15 @@ PHPAPI void php_debug_zval_dump(zval *struc, int level) /* {{{ */
 					zval_object_property_dump(prop_info, val, index, key, level);
 				}
 			} ZEND_HASH_FOREACH_END();
-			GC_UNPROTECT_RECURSION(myht);
 			zend_release_properties(myht);
 		}
 		if (level > 1) {
 			php_printf("%*c", level - 1, ' ');
 		}
 		PUTS("}\n");
+		ZEND_GUARD_OR_GC_UNPROTECT_RECURSION(guard, DEBUG, zobj);
 		break;
+	}
 	case IS_RESOURCE: {
 		const char *type_name = zend_rsrc_list_get_rsrc_type(Z_RES_P(struc));
 		php_printf("resource(" ZEND_LONG_FMT ") of type (%s) refcount(%u)\n", Z_RES_P(struc)->handle, type_name ? type_name : "Unknown", Z_REFCOUNT_P(struc));
@@ -551,18 +557,20 @@ again:
 
 			break;
 
-		case IS_OBJECT:
-			myht = zend_get_properties_for(struc, ZEND_PROP_PURPOSE_VAR_EXPORT);
-			if (myht) {
-				if (GC_IS_RECURSIVE(myht)) {
-					smart_str_appendl(buf, "NULL", 4);
-					zend_error(E_WARNING, "var_export does not handle circular references");
-					zend_release_properties(myht);
-					return;
-				} else {
-					GC_TRY_PROTECT_RECURSION(myht);
-				}
+		case IS_OBJECT: {
+			/* Check if this is already recursing on the object before calling zend_get_properties_for,
+			 * to allow infinite recursion detection to work even if classes return temporary arrays,
+			 * and to avoid the need to update the properties table in place to reflect the state
+			 * if the result won't be used. (https://github.com/php/php-src/issues/8044) */
+			zend_object *zobj = Z_OBJ_P(struc);
+			uint32_t *guard = zend_get_recursion_guard(zobj);
+			if (ZEND_GUARD_OR_GC_IS_RECURSIVE(guard, EXPORT, zobj)) {
+				smart_str_appendl(buf, "NULL", 4);
+				zend_error(E_WARNING, "var_export does not handle circular references");
+				return;
 			}
+			ZEND_GUARD_OR_GC_PROTECT_RECURSION(guard, EXPORT, zobj);
+			myht = zend_get_properties_for(struc, ZEND_PROP_PURPOSE_VAR_EXPORT);
 			if (level > 1) {
 				smart_str_appendc(buf, '\n');
 				buffer_append_spaces(buf, level - 1);
@@ -575,6 +583,7 @@ again:
 			if (ce == zend_standard_class_def) {
 				smart_str_appendl(buf, "(object) array(\n", 16);
 			} else {
+				smart_str_appendc(buf, '\\');
 				smart_str_append(buf, ce->name);
 				if (is_enum) {
 					zend_object *zobj = Z_OBJ_P(struc);
@@ -592,9 +601,9 @@ again:
 						php_object_element_export(val, index, key, level, buf);
 					} ZEND_HASH_FOREACH_END();
 				}
-				GC_TRY_UNPROTECT_RECURSION(myht);
 				zend_release_properties(myht);
 			}
+			ZEND_GUARD_OR_GC_UNPROTECT_RECURSION(guard, EXPORT, zobj);
 			if (level > 1 && !is_enum) {
 				buffer_append_spaces(buf, level - 1);
 			}
@@ -605,6 +614,7 @@ again:
 			}
 
 			break;
+		}
 		case IS_REFERENCE:
 			struc = Z_REFVAL_P(struc);
 			goto again;
@@ -644,7 +654,7 @@ PHP_FUNCTION(var_export)
 	smart_str_0 (&buf);
 
 	if (return_output) {
-		RETURN_NEW_STR(buf.s);
+		RETURN_STR(smart_str_extract(&buf));
 	} else {
 		PHPWRITE(ZSTR_VAL(buf.s), ZSTR_LEN(buf.s));
 		smart_str_free(&buf);
@@ -682,7 +692,7 @@ static inline zend_long php_add_var_hash(php_serialize_data_t data, zval *var, b
 
 	/* Index for the variable is stored using the numeric value of the pointer to
 	 * the zend_refcounted struct */
-	key = (zend_ulong) (zend_uintptr_t) Z_COUNTED_P(var);
+	key = (zend_ulong) (uintptr_t) Z_COUNTED_P(var);
 	zv = zend_hash_index_find(&data->ht, key);
 
 	if (zv) {
@@ -766,28 +776,13 @@ static inline bool php_var_serialize_class_name(smart_str *buf, zval *struc) /* 
 
 static HashTable* php_var_serialize_call_sleep(zend_object *obj, zend_function *fn) /* {{{ */
 {
-	zend_result res;
-	zend_fcall_info fci;
-	zend_fcall_info_cache fci_cache;
 	zval retval;
 
-	fci.size = sizeof(fci);
-	fci.object = obj;
-	fci.retval = &retval;
-	fci.param_count = 0;
-	fci.params = NULL;
-	fci.named_params = NULL;
-	ZVAL_UNDEF(&fci.function_name);
-
-	fci_cache.function_handler = fn;
-	fci_cache.object = obj;
-	fci_cache.called_scope = obj->ce;
-
 	BG(serialize_lock)++;
-	res = zend_call_function(&fci, &fci_cache);
+	zend_call_known_instance_method(fn, obj, &retval, /* param_count */ 0, /* params */ NULL);
 	BG(serialize_lock)--;
 
-	if (res == FAILURE || Z_ISUNDEF(retval)) {
+	if (Z_ISUNDEF(retval) || EG(exception)) {
 		zval_ptr_dtor(&retval);
 		return NULL;
 	}
@@ -844,7 +839,7 @@ static int php_var_serialize_try_add_sleep_prop(
 	}
 
 	if (!zend_hash_add(ht, name, val)) {
-		php_error_docref(NULL, E_NOTICE,
+		php_error_docref(NULL, E_WARNING,
 			"\"%s\" is returned from __sleep() multiple times", ZSTR_VAL(error_name));
 		return SUCCESS;
 	}
@@ -991,12 +986,26 @@ static void php_var_serialize_class(smart_str *buf, zval *struc, HashTable *ht, 
 }
 /* }}} */
 
+static zend_always_inline bool php_serialize_check_stack_limit(void)
+{
+#ifdef ZEND_CHECK_STACK_LIMIT
+	return zend_call_stack_overflowed(EG(stack_limit));
+#else
+	return false;
+#endif
+}
+
 static void php_var_serialize_intern(smart_str *buf, zval *struc, php_serialize_data_t var_hash, bool in_rcn_array, bool is_root) /* {{{ */
 {
 	zend_long var_already;
 	HashTable *myht;
 
 	if (EG(exception)) {
+		return;
+	}
+
+	if (UNEXPECTED(php_serialize_check_stack_limit())) {
+		zend_throw_error(NULL, "Maximum call stack size reached. Infinite recursion?");
 		return;
 	}
 
@@ -1150,7 +1159,7 @@ again:
 					} else {
 						/* Mark this value in the var_hash, to avoid creating references to it. */
 						zval *var_idx = zend_hash_index_find(&var_hash->ht,
-							(zend_ulong) (zend_uintptr_t) Z_COUNTED_P(struc));
+							(zend_ulong) (uintptr_t) Z_COUNTED_P(struc));
 						if (var_idx) {
 							ZVAL_LONG(var_idx, -1);
 						}
@@ -1323,11 +1332,7 @@ PHP_FUNCTION(serialize)
 		RETURN_THROWS();
 	}
 
-	if (buf.s) {
-		RETURN_NEW_STR(buf.s);
-	} else {
-		RETURN_EMPTY_STRING();
-	}
+	RETURN_STR(smart_str_extract(&buf));
 }
 /* }}} */
 
@@ -1355,7 +1360,7 @@ PHPAPI void php_unserialize_with_options(zval *return_value, const char *buf, co
 
 		classes = zend_hash_str_find_deref(options, "allowed_classes", sizeof("allowed_classes")-1);
 		if (classes && Z_TYPE_P(classes) != IS_ARRAY && Z_TYPE_P(classes) != IS_TRUE && Z_TYPE_P(classes) != IS_FALSE) {
-			zend_type_error("%s(): Option \"allowed_classes\" must be of type array|bool, %s given", function_name, zend_zval_type_name(classes));
+			zend_type_error("%s(): Option \"allowed_classes\" must be of type array|bool, %s given", function_name, zend_zval_value_name(classes));
 			goto cleanup;
 		}
 
@@ -1384,7 +1389,7 @@ PHPAPI void php_unserialize_with_options(zval *return_value, const char *buf, co
 		max_depth = zend_hash_str_find_deref(options, "max_depth", sizeof("max_depth") - 1);
 		if (max_depth) {
 			if (Z_TYPE_P(max_depth) != IS_LONG) {
-				zend_type_error("%s(): Option \"max_depth\" must be of type int, %s given", function_name, zend_zval_type_name(max_depth));
+				zend_type_error("%s(): Option \"max_depth\" must be of type int, %s given", function_name, zend_zval_value_name(max_depth));
 				goto cleanup;
 			}
 			if (Z_LVAL_P(max_depth) < 0) {
@@ -1406,18 +1411,26 @@ PHPAPI void php_unserialize_with_options(zval *return_value, const char *buf, co
 	}
 	if (!php_var_unserialize(retval, &p, p + buf_len, &var_hash)) {
 		if (!EG(exception)) {
-			php_error_docref(NULL, E_NOTICE, "Error at offset " ZEND_LONG_FMT " of %zd bytes",
+			php_error_docref(NULL, E_WARNING, "Error at offset " ZEND_LONG_FMT " of %zd bytes",
 				(zend_long)((char*)p - buf), buf_len);
 		}
 		if (BG(unserialize).level <= 1) {
 			zval_ptr_dtor(return_value);
 		}
 		RETVAL_FALSE;
-	} else if (BG(unserialize).level > 1) {
-		ZVAL_COPY(return_value, retval);
-	} else if (Z_REFCOUNTED_P(return_value)) {
-		zend_refcounted *ref = Z_COUNTED_P(return_value);
-		gc_check_possible_root(ref);
+	} else {
+		if ((char*)p < buf + buf_len) {
+			if (!EG(exception)) {
+				php_error_docref(NULL, E_WARNING, "Extra data starting at offset " ZEND_LONG_FMT " of %zd bytes",
+					(zend_long)((char*)p - buf), buf_len);
+			}
+		}
+		if (BG(unserialize).level > 1) {
+			ZVAL_COPY(return_value, retval);
+		} else if (Z_REFCOUNTED_P(return_value)) {
+			zend_refcounted *ref = Z_COUNTED_P(return_value);
+			gc_check_possible_root(ref);
+		}
 	}
 
 cleanup:
@@ -1481,6 +1494,14 @@ PHP_FUNCTION(memory_get_peak_usage) {
 	ZEND_PARSE_PARAMETERS_END();
 
 	RETURN_LONG(zend_memory_peak_usage(real_usage));
+}
+/* }}} */
+
+/* {{{ Resets the peak PHP memory usage */
+PHP_FUNCTION(memory_reset_peak_usage) {
+	ZEND_PARSE_PARAMETERS_NONE();
+
+	zend_memory_reset_peak_usage();
 }
 /* }}} */
 

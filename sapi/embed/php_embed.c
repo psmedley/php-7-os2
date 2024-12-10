@@ -119,10 +119,7 @@ static void php_embed_register_variables(zval *track_vars_array)
 /* Module initialization (MINIT) */
 static int php_embed_startup(sapi_module_struct *sapi_module)
 {
-	if (php_module_startup(sapi_module, NULL, 0) == FAILURE) {
-		return FAILURE;
-	}
-	return SUCCESS;
+	return php_module_startup(sapi_module, NULL);
 }
 
 EMBED_SAPI_API sapi_module_struct php_embed_module = {
@@ -217,8 +214,7 @@ EMBED_SAPI_API int php_embed_init(int argc, char **argv)
 	 * allocated so any INI settings added via this callback will have the
 	 * lowest precedence and will allow INI files to overwrite them.
 	 */
-	php_embed_module.ini_entries = malloc(sizeof(HARDCODED_INI));
-	memcpy(php_embed_module.ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
+	php_embed_module.ini_entries = HARDCODED_INI;
 
 	/* SAPI-provided functions. */
 	php_embed_module.additional_functions = additional_functions;
@@ -267,9 +263,4 @@ EMBED_SAPI_API void php_embed_shutdown(void)
 #ifdef ZTS
 	tsrm_shutdown();
 #endif
-
-	if (php_embed_module.ini_entries) {
-		free(php_embed_module.ini_entries);
-		php_embed_module.ini_entries = NULL;
-	}
 }

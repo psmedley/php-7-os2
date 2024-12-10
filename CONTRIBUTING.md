@@ -14,6 +14,7 @@ had several contributions accepted, commit privileges are often quickly granted.
 * [Pull requests](#pull-requests)
 * [Filing bugs](#filing-bugs)
 * [Feature requests](#feature-requests)
+* [Technical resources](#technical-resources)
 * [Writing tests](#writing-tests)
 * [Writing documentation](#writing-documentation)
 * [Getting help](#getting-help)
@@ -35,8 +36,9 @@ If you are fixing a bug, then please submit your PR against the lowest actively
 supported branch of PHP that the bug affects (only green branches on
 [the supported version page](https://www.php.net/supported-versions.php) are
 supported). For example, at the time of writing, the lowest supported version is
-PHP 7.3, which corresponds to the `PHP-7.3` branch in Git. Please also make sure
-you add a link to the PR in the bug on [the bug tracker](https://bugs.php.net/).
+PHP 8.0, which corresponds to the `PHP-8.0` branch in Git. Please also make sure
+you add a link to the PR in the bug on [the bug tracker](https://github.com/php/php-src/issues)
+or [the old bug tracker](https://bugs.php.net/).
 
 Pull requests implementing RFCs should be submitted against `master`.
 
@@ -49,7 +51,8 @@ them by using `git rebase` instead of `git merge`.
 Fork the official PHP repository and send a pull request. A notification will be
 sent to the pull request mailing list. Sending a note to PHP Internals list
 (internals@lists.php.net) may help getting more feedback and quicker turnaround.
-You can also add pull requests to [bug reports](https://bugs.php.net/).
+You can also add pull requests to [bug reports](https://github.com/php/php-src/issues)
+and [old bug reports](https://bugs.php.net/).
 
 Read [Git access page](https://www.php.net/git.php) for help on using Git to get
 and build PHP source code. We recommend to look at our
@@ -58,8 +61,8 @@ and build PHP source code. We recommend to look at our
 
 ## Filing bugs
 
-Bugs can be filed on the [PHP bug tracker](https://bugs.php.net/). If this is
-the first time you've filed a bug, we suggest reading the
+Bugs can be filed on [GitHub Issues](https://github.com/php/php-src/issues/new/choose).
+If this is the first time you've filed a bug, we suggest reading the
 [guide to reporting a bug](https://bugs.php.net/how-to-report.php).
 
 Where possible, please include a self-contained reproduction case!
@@ -72,8 +75,8 @@ accompanied by [pull requests](#pull-requests). You can find the extremely large
 list of RFCs that have been previously considered on the
 [PHP Wiki](https://wiki.php.net/rfc).
 
-To create a RFC, discuss it with the extension maintainer, and discuss it on the
-development mailing list internals@lists.php.net. RFC Wiki accounts can be
+To create an RFC, discuss it with the extension maintainer, and discuss it on
+the development mailing list internals@lists.php.net. RFC Wiki accounts can be
 requested on https://wiki.php.net/start?do=register. PHP extension maintainers
 can be found in the [EXTENSIONS](/EXTENSIONS) file in the PHP source code
 repository. Mailing list subscription is explained on the
@@ -82,6 +85,30 @@ repository. Mailing list subscription is explained on the
 You may also want to read
 [The Mysterious PHP RFC Process](https://blogs.oracle.com/opal/post/the-mysterious-php-rfc-process-and-how-you-can-change-the-web)
 for additional notes on the best way to approach submitting an RFC.
+
+## Technical resources
+
+There are a number of technical resources on php-src. Unfortunately, they are
+scattered across different websites, and often outdated. Nonetheless, they can
+provide a good starting point for learning about the fundamentals of the code
+base.
+
+* https://www.phpinternalsbook.com/
+* https://www.npopov.com/
+  * [Internal value representation](https://www.npopov.com/2015/05/05/Internal-value-representation-in-PHP-7-part-1.html), [part 2](https://www.npopov.com/2015/06/19/Internal-value-representation-in-PHP-7-part-2.html)
+  * [HashTable implementation](https://www.npopov.com/2014/12/22/PHPs-new-hashtable-implementation.html)
+  * [Zend Virtual Machine](https://www.npopov.com/2017/04/14/PHP-7-Virtual-machine.html)
+  * [How opcache works](https://www.npopov.com/2021/10/13/How-opcache-works.html)
+  * [The opcache optimizer](https://www.npopov.com/2022/05/22/The-opcache-optimizer.html)
+* https://wiki.php.net/internals
+  * [Objects](https://wiki.php.net/internals/engine/objects)
+* https://qa.php.net/
+  * [Writing tests](https://qa.php.net/write-test.php)
+  * [Running tests](https://qa.php.net/running-tests.php)
+  * [PHPT structure](https://qa.php.net/phpt_details.php)
+* https://phpinternals.net/
+  * [Implementing new operator](https://phpinternals.net/articles/implementing_a_range_operator_into_php), [part 2](https://phpinternals.net/articles/a_reimplementation_of_the_range_operator)
+  * [Opcode extending](https://phpinternals.net/articles/implementing_new_language_constructs_via_opcode_extending)
 
 ## Writing tests
 
@@ -181,9 +208,6 @@ locations.
        └─ ...
     └─ pcre/
        ├─ pcre2lib/                 # https://www.pcre.org/
-       └─ ...
-    └─ pdo_mysql/
-       ├─ php_pdo_mysql_sqlstate.h  # Generated by `ext/pdo_mysql/get_error_codes.php`
        └─ ...
     └─ skeleton/                    # Skeleton for developing new extensions with `ext/ext_skel.php`
        └─ ...
@@ -294,7 +318,7 @@ detailed [information on Git](https://git-scm.com/).
 
 PHP is developed through the efforts of a large number of people. Collaboration
 is a Good Thing(tm), and Git lets us do this. Thus, following some basic rules
-with regards to Git usage will:
+with regard to Git usage will:
 
 * Make everybody happier, especially those responsible for maintaining PHP
   itself.
@@ -324,15 +348,17 @@ Having said that, here are the organizational rules:
    `--enable-zts` switch to ensure your code handles TSRM correctly and doesn't
    break for those who need that.
 
-Currently we have the following branches in use:
+Currently, we have the following branches in use:
 
 | Branch    |           |
 | --------- | --------- |
-| master    | Active development branch for PHP 8.1, which is open for backwards incompatible changes and major internal API changes. |
-| PHP-8.0   | Is used to release the PHP 8.0.x series. This is a current stable version and is open for bugfixes only. |
-| PHP-7.4   | Is used to release the PHP 7.4.x series. This is a current stable version and is open for bugfixes only. |
-| PHP-7.3   | Is used to release the PHP 7.3.x series. This is a current stable version and is open for bugfixes only. |
-| PHP-7.2   | Is used to release the PHP 7.2.x series. This is an old stable version and is open for security fixes only. |
+| master    | Active development branch for PHP 8.3, which is open for backwards incompatible changes and major internal API changes. |
+| PHP-8.2   | Is used to release the PHP 8.2.x series. This is a current stable version and is open for bugfixes only. |
+| PHP-8.1   | Is used to release the PHP 8.1.x series. This is a current stable version and is open for bugfixes only. |
+| PHP-8.0   | Is used to release the PHP 8.0.x series. This is an old stable version and is open for security fixes only. |
+| PHP-7.4   | This branch is closed. |
+| PHP-7.3   | This branch is closed. |
+| PHP-7.2   | This branch is closed. |
 | PHP-7.1   | This branch is closed. |
 | PHP-7.0   | This branch is closed. |
 | PHP-5.6   | This branch is closed. |
@@ -347,8 +373,8 @@ Currently we have the following branches in use:
 The next few rules are more of a technical nature:
 
 1. All non-security bugfix changes should first go to the lowest bugfix branch
-   (i.e. 7.3) and then get merged up to all other branches. All security fixes
-   should go to the lowest security fixes branch (i.e 7.2). If a change is not
+   (i.e. 8.0) and then get merged up to all other branches. All security fixes
+   should go to the lowest security fixes branch (i.e 7.4). If a change is not
    needed for later branches (i.e. fixes for features which were dropped from
    later branches) an empty merge should be done.
 

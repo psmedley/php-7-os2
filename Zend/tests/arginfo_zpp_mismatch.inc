@@ -29,9 +29,6 @@ function skipFunction($function): bool {
      || $function === 'posix_setrlimit'
      || $function === 'sapi_windows_generate_ctrl_event'
      || $function === 'imagegrabscreen'
-     // PHP-8.1 only
-     || $function === 'dcgettext'
-     || $function === 'dcngettext'
     ) {
         return true;
     }

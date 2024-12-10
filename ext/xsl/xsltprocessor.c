@@ -65,7 +65,7 @@ static char **php_xsl_xslt_make_params(HashTable *parht, int xpath_params)
 	params = (char **)safe_emalloc((2 * zend_hash_num_elements(parht) + 1), sizeof(char *), 0);
 	memset((char *)params, 0, parsize);
 
-	ZEND_HASH_FOREACH_STR_KEY_VAL(parht, string_key, value) {
+	ZEND_HASH_MAP_FOREACH_STR_KEY_VAL(parht, string_key, value) {
 		ZEND_ASSERT(string_key != NULL);
 		if (Z_TYPE_P(value) != IS_STRING) {
 			if (!try_convert_to_string(value)) {
@@ -96,7 +96,7 @@ static void xsl_ext_function_php(xmlXPathParserContextPtr ctxt, int nargs, int t
 	xsltTransformContextPtr tctxt;
 	zval *args = NULL;
 	zval retval;
-	int result, i;
+	int i;
 	int error = 0;
 	zend_fcall_info fci;
 	zval handler;
@@ -199,7 +199,19 @@ static void xsl_ext_function_php(xmlXPathParserContextPtr ctxt, int nargs, int t
 								node->parent = nsparent;
 								node->ns = curns;
 							} else {
-								node = xmlDocCopyNode(node, domintern->document->ptr, 1);
+								/**
+								 * Upon freeing libxslt's context, every document which is not the *main* document will be freed by libxslt.
+								 * If a node of a document which is *not the main* document gets returned to userland, we'd free the node twice:
+								 * first by the cleanup of the xslt context, and then by our own refcounting mechanism.
+								 * To prevent this, we'll take a copy if the node is not from the main document.
+								 * It is important that we do not copy the node unconditionally, because that means that:
+								 *  - modifications to the node will only modify the copy, and not the original
+								 *  - accesses to the parent, path, ... will not work
+								 */
+								xsltTransformContextPtr transform_ctxt = (xsltTransformContextPtr) ctxt->context->extra;
+								if (node->doc != transform_ctxt->document->doc) {
+									node = xmlDocCopyNode(node, domintern->document->ptr, 1);
+								}
 							}
 
 							php_dom_create_object(node, &child, domintern);
@@ -256,40 +268,33 @@ static void xsl_ext_function_php(xmlXPathParserContextPtr ctxt, int nargs, int t
 		/* Push an empty string, so that we at least have an xslt result... */
 		valuePush(ctxt, xmlXPathNewString((const xmlChar *) ""));
 	} else {
-		result = zend_call_function(&fci, NULL);
-		if (result == FAILURE) {
-			if (Z_TYPE(handler) == IS_STRING) {
-				php_error_docref(NULL, E_WARNING, "Unable to call handler %s()", Z_STRVAL(handler));
-				valuePush(ctxt, xmlXPathNewString((const xmlChar *) ""));
+		zend_call_function(&fci, NULL);
+		if (Z_ISUNDEF(retval)) {
+			/* Exception thrown, don't do anything further. */
+		} else if (Z_TYPE(retval) == IS_OBJECT && instanceof_function(Z_OBJCE(retval), dom_node_class_entry)) {
+			xmlNode *nodep;
+			dom_object *obj;
+			if (intern->node_list == NULL) {
+				intern->node_list = zend_new_array(0);
 			}
-		/* retval is == NULL, when an exception occurred, don't report anything, because PHP itself will handle that */
-		} else if (Z_ISUNDEF(retval)) {
+			Z_ADDREF(retval);
+			zend_hash_next_index_insert(intern->node_list, &retval);
+			obj = Z_DOMOBJ_P(&retval);
+			nodep = dom_object_get_node(obj);
+			valuePush(ctxt, xmlXPathNewNodeSet(nodep));
+		} else if (Z_TYPE(retval) == IS_TRUE || Z_TYPE(retval) == IS_FALSE) {
+			valuePush(ctxt, xmlXPathNewBoolean(Z_TYPE(retval) == IS_TRUE));
+		} else if (Z_TYPE(retval) == IS_OBJECT) {
+			php_error_docref(NULL, E_WARNING, "A PHP Object cannot be converted to a XPath-string");
+			valuePush(ctxt, xmlXPathNewString((const xmlChar *) ""));
 		} else {
-			if (Z_TYPE(retval) == IS_OBJECT && instanceof_function(Z_OBJCE(retval), dom_node_class_entry)) {
-				xmlNode *nodep;
-				dom_object *obj;
-				if (intern->node_list == NULL) {
-					intern->node_list = zend_new_array(0);
-				}
-				Z_ADDREF(retval);
-				zend_hash_next_index_insert(intern->node_list, &retval);
-				obj = Z_DOMOBJ_P(&retval);
-				nodep = dom_object_get_node(obj);
-				valuePush(ctxt, xmlXPathNewNodeSet(nodep));
-			} else if (Z_TYPE(retval) == IS_TRUE || Z_TYPE(retval) == IS_FALSE) {
-				valuePush(ctxt, xmlXPathNewBoolean(Z_TYPE(retval) == IS_TRUE));
-			} else if (Z_TYPE(retval) == IS_OBJECT) {
-				php_error_docref(NULL, E_WARNING, "A PHP Object cannot be converted to a XPath-string");
-				valuePush(ctxt, xmlXPathNewString((const xmlChar *) ""));
-			} else {
-				convert_to_string(&retval);
-				valuePush(ctxt, xmlXPathNewString((xmlChar *) Z_STRVAL(retval)));
-			}
-			zval_ptr_dtor(&retval);
+			convert_to_string(&retval);
+			valuePush(ctxt, xmlXPathNewString((xmlChar *) Z_STRVAL(retval)));
 		}
+		zval_ptr_dtor(&retval);
 	}
 	zend_string_release_ex(callable, 0);
-	zval_ptr_dtor(&handler);
+	zval_ptr_dtor_nogc(&handler);
 	if (fci.param_count > 0) {
 		for (i = 0; i < nargs - 1; i++) {
 			zval_ptr_dtor(&args[i]);
@@ -360,7 +365,7 @@ PHP_METHOD(XSLTProcessor, importStylesheet)
 
 	intern = Z_XSL_P(id);
 
-	member = zend_string_init("cloneDocument", sizeof("cloneDocument")-1, 0);
+	member = ZSTR_INIT_LITERAL("cloneDocument", 0);
 	cloneDocu = zend_std_read_property(Z_OBJ_P(id), member, BP_VAR_IS, NULL, &rv);
 	if (Z_TYPE_P(cloneDocu) != IS_NULL) {
 		convert_to_long(cloneDocu);
@@ -461,7 +466,7 @@ static xmlDocPtr php_xsl_apply_stylesheet(zval *id, xsl_object *intern, xsltStyl
 	ctxt = xsltNewTransformContext(style, doc);
 	ctxt->_private = (void *) intern;
 
-	member = zend_string_init("doXInclude", sizeof("doXInclude")-1, 0);
+	member = ZSTR_INIT_LITERAL("doXInclude", 0);
 	doXInclude = zend_std_read_property(Z_OBJ_P(id), member, BP_VAR_IS, NULL, &rv);
 	if (Z_TYPE_P(doXInclude) != IS_NULL) {
 		convert_to_long(doXInclude);

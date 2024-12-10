@@ -262,7 +262,7 @@ static const char* zend_jit_disasm_resolver(
 	((void)ud);
 # endif
 	const char *name;
-	void *a = (void*)(zend_uintptr_t)(addr);
+	void *a = (void*)(uintptr_t)(addr);
 	Dl_info info;
 
 	name = zend_jit_disasm_find_symbol(addr, offset);
@@ -415,7 +415,7 @@ static int zend_jit_disasm(const char    *name,
 
 	/* label numbering */
 	n = 0; m = 0;
-	ZEND_HASH_FOREACH_VAL(&labels, z) {
+	ZEND_HASH_MAP_FOREACH_VAL(&labels, z) {
 		if (Z_TYPE_P(z) == IS_FALSE) {
 			m--;
 			ZVAL_LONG(z, m);
@@ -655,10 +655,16 @@ static int zend_jit_disasm_init(void)
 	REGISTER_HELPER(zend_jit_vm_stack_free_args_helper);
 	REGISTER_HELPER(zend_jit_copy_extra_args_helper);
 	REGISTER_HELPER(zend_jit_deprecated_helper);
+	REGISTER_HELPER(zend_jit_undefined_long_key);
+	REGISTER_HELPER(zend_jit_undefined_string_key);
 	REGISTER_HELPER(zend_jit_assign_const_to_typed_ref);
 	REGISTER_HELPER(zend_jit_assign_tmp_to_typed_ref);
 	REGISTER_HELPER(zend_jit_assign_var_to_typed_ref);
 	REGISTER_HELPER(zend_jit_assign_cv_to_typed_ref);
+	REGISTER_HELPER(zend_jit_assign_const_to_typed_ref2);
+	REGISTER_HELPER(zend_jit_assign_tmp_to_typed_ref2);
+	REGISTER_HELPER(zend_jit_assign_var_to_typed_ref2);
+	REGISTER_HELPER(zend_jit_assign_cv_to_typed_ref2);
 	REGISTER_HELPER(zend_jit_pre_inc_typed_ref);
 	REGISTER_HELPER(zend_jit_pre_dec_typed_ref);
 	REGISTER_HELPER(zend_jit_post_inc_typed_ref);
@@ -697,9 +703,6 @@ static int zend_jit_disasm_init(void)
 	REGISTER_HELPER(zend_jit_post_inc_obj_helper);
 	REGISTER_HELPER(zend_jit_post_dec_obj_helper);
 	REGISTER_HELPER(zend_jit_rope_end);
-#if (PHP_VERSION_ID <= 80100) && (SIZEOF_SIZE_T == 4)
-	REGISTER_HELPER(zval_jit_update_constant_ex);
-#endif
 	REGISTER_HELPER(zend_jit_free_trampoline_helper);
 	REGISTER_HELPER(zend_jit_exception_in_interrupt_handler_helper);
 #undef  REGISTER_HELPER

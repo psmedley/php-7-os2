@@ -542,7 +542,7 @@ static int _php_filter_validate_domain(char * domain, size_t len, zend_long flag
 			/* Reset label length counter */
 			i = 1;
 		} else {
-			if (i > 63 || (hostname && *s != '-' && !isalnum((int)*(unsigned char *)s))) {
+			if (i > 63 || (hostname && (*s != '-' || *(s + 1) == '\0') && !isalnum((int)*(unsigned char *)s))) {
 				return 0;
 			}
 
@@ -902,7 +902,7 @@ void php_filter_validate_ip(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 			}
 
 			/* Check flags */
-			if (flags & FILTER_FLAG_NO_PRIV_RANGE) {
+			if (flags & FILTER_FLAG_NO_PRIV_RANGE  || flags & FILTER_FLAG_GLOBAL_RANGE) {
 				if (
 					(ip[0] == 10) ||
 					(ip[0] == 172 && ip[1] >= 16 && ip[1] <= 31) ||
@@ -912,7 +912,7 @@ void php_filter_validate_ip(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 				}
 			}
 
-			if (flags & FILTER_FLAG_NO_RES_RANGE) {
+			if (flags & FILTER_FLAG_NO_RES_RANGE || flags & FILTER_FLAG_GLOBAL_RANGE) {
 				if (
 					(ip[0] == 0) ||
 					(ip[0] >= 240) ||
@@ -922,6 +922,20 @@ void php_filter_validate_ip(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 					RETURN_VALIDATION_FAILED
 				}
 			}
+
+			if (flags & FILTER_FLAG_GLOBAL_RANGE) {
+				if (
+						(ip[0] == 100 && ip[1] >= 64 && ip[1] <= 127 ) ||
+						(ip[0] == 192 && ip[1] == 0 && ip[2] == 0 ) ||
+						(ip[0] == 192 && ip[1] == 0 && ip[2] == 2 ) ||
+						(ip[0] == 198 && ip[1] >= 18 && ip[1] <= 19 ) ||
+						(ip[0] == 198 && ip[1] == 51 && ip[2] == 100 ) ||
+						(ip[0] == 203 && ip[1] == 0 && ip[2] == 113 )
+		   ) {
+					RETURN_VALIDATION_FAILED
+				}
+			}
+
 			break;
 
 		case FORMAT_IPV6:
@@ -932,14 +946,14 @@ void php_filter_validate_ip(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 					RETURN_VALIDATION_FAILED
 				}
 				/* Check flags */
-				if (flags & FILTER_FLAG_NO_PRIV_RANGE) {
+				if (flags & FILTER_FLAG_NO_PRIV_RANGE || flags & FILTER_FLAG_GLOBAL_RANGE) {
 					if (ip[0] >= 0xfc00 && ip[0] <= 0xfdff) {
 						RETURN_VALIDATION_FAILED
 					}
 				}
-				if (flags & FILTER_FLAG_NO_RES_RANGE) {
+				if (flags & FILTER_FLAG_NO_RES_RANGE || flags & FILTER_FLAG_GLOBAL_RANGE) {
 					if ((ip[0] == 0 && ip[1] == 0 && ip[2] == 0 && ip[3] == 0
-						&& ip[4] == 0 && ip[5] == 0 && ip[6] == 0 && (ip[7] == 0 || ip[7] == 1))
+							&& ip[4] == 0 && ip[5] == 0 && ip[6] == 0 && (ip[7] == 0 || ip[7] == 1))
 						|| (ip[0] == 0x5f)
 						|| (ip[0] >= 0xfe80 && ip[0] <= 0xfebf)
 						|| (ip[0] == 0x2001 && (ip[1] == 0x0db8 || (ip[1] >= 0x0010 && ip[1] <= 0x001f)))
@@ -947,8 +961,18 @@ void php_filter_validate_ip(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 								) {
 									RETURN_VALIDATION_FAILED
 								}
-							}
-							}
+				}
+				if (flags & FILTER_FLAG_GLOBAL_RANGE) {
+					if ((ip[0] == 0 && ip[1] == 0 && ip[2] == 0 && ip[3] == 0 && ip[4] == 0 && ip[5] == 0xffff) ||
+							(ip[0] == 0x0100 && ip[1] == 0 && ip[2] == 0 && ip[3] == 0) ||
+							(ip[0] == 0x2001 && ip[1] <= 0x01ff) ||
+							(ip[0] == 0x2001 && ip[1] == 0x0002 && ip[2] == 0) ||
+							(ip[0] >= 0xfc00 && ip[0] <= 0xfdff)
+					   ) {
+						RETURN_VALIDATION_FAILED
+					}
+				}
+			}
 			break;
 	}
 }

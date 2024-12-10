@@ -82,6 +82,9 @@ PHP_MINIT_FUNCTION(readline)
 #if HAVE_RL_CALLBACK_READ_CHAR
 	ZVAL_UNDEF(&_prepped_callback);
 #endif
+
+	register_readline_symbols(module_number);
+
 	return PHP_MINIT(cli_readline)(INIT_FUNC_ARGS_PASSTHRU);
 }
 
@@ -453,7 +456,7 @@ char **php_readline_completion_cb(const char *text, int start, int end)
 				matches = rl_completion_matches(text,_readline_command_generator);
 			} else {
 				/* libedit will read matches[2] */
-				matches = calloc(sizeof(char *), 3);
+				matches = calloc(3, sizeof(char *));
 				if (!matches) {
 					return NULL;
 				}

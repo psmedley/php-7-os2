@@ -38,6 +38,7 @@ struct _notationIterator {
 	xmlNotation *notation;
 };
 
+/* Function pointer typedef changed in 2.9.8, see https://github.com/GNOME/libxml2/commit/e03f0a199a67017b2f8052354cf732b2b4cae787 */
 #if LIBXML_VERSION >= 20908
 static void itemHashScanner (void *payload, void *data, const xmlChar *name) /* {{{ */
 #else
@@ -147,8 +148,7 @@ static int php_dom_iterator_valid(zend_object_iterator *iter) /* {{{ */
 zval *php_dom_iterator_current_data(zend_object_iterator *iter) /* {{{ */
 {
 	php_dom_iterator *iterator = (php_dom_iterator *)iter;
-
-	return &iterator->curobj;
+	return Z_ISUNDEF(iterator->curobj) ? NULL : &iterator->curobj;
 }
 /* }}} */
 
@@ -179,18 +179,20 @@ static void php_dom_iterator_move_forward(zend_object_iterator *iter) /* {{{ */
 	dom_object *intern;
 	dom_object *nnmap;
 	dom_nnodemap_object *objmap;
-	int previndex=0;
+	zend_long previndex;
 	HashTable *nodeht;
 	zval *entry;
 	bool do_curobj_undef = 1;
 
 	php_dom_iterator *iterator = (php_dom_iterator *)iter;
+	if (Z_ISUNDEF(iterator->curobj)) {
+		return;
+	}
 
+	intern = Z_DOMOBJ_P(&iterator->curobj);
 	object = &iterator->intern.data;
 	nnmap = Z_DOMOBJ_P(object);
 	objmap = (dom_nnodemap_object *)nnmap->ptr;
-
-	intern = Z_DOMOBJ_P(&iterator->curobj);
 
 	if (intern != NULL && intern->ptr != NULL) {
 		if (objmap->nodetype != XML_ENTITY_NODE &&
@@ -205,23 +207,31 @@ static void php_dom_iterator_move_forward(zend_object_iterator *iter) /* {{{ */
 					do_curobj_undef = 0;
 				}
 			} else {
-				curnode = (xmlNodePtr)((php_libxml_node_ptr *)intern->ptr)->node;
 				if (objmap->nodetype == XML_ATTRIBUTE_NODE ||
 					objmap->nodetype == XML_ELEMENT_NODE) {
+					curnode = (xmlNodePtr)((php_libxml_node_ptr *)intern->ptr)->node;
 					curnode = curnode->next;
 				} else {
-					/* Nav the tree evey time as this is LIVE */
+					/* The collection is live, we nav the tree from the base object if we cannot
+					 * use the cache to restart from the last point. */
 					basenode = dom_object_get_node(objmap->baseobj);
-					if (basenode && (basenode->type == XML_DOCUMENT_NODE ||
-						basenode->type == XML_HTML_DOCUMENT_NODE)) {
-						basenode = xmlDocGetRootElement((xmlDoc *) basenode);
-					} else if (basenode) {
-						basenode = basenode->children;
-					} else {
+					if (UNEXPECTED(!basenode)) {
 						goto err;
 					}
+					if (php_dom_is_cache_tag_stale_from_node(&iterator->cache_tag, basenode)) {
+						php_dom_mark_cache_tag_up_to_date_from_node(&iterator->cache_tag, basenode);
+						previndex = 0;
+						if (basenode->type == XML_DOCUMENT_NODE || basenode->type == XML_HTML_DOCUMENT_NODE) {
+							curnode = xmlDocGetRootElement((xmlDoc *) basenode);
+						} else {
+							curnode = basenode->children;
+						}
+					} else {
+						previndex = iter->index - 1;
+						curnode = (xmlNodePtr)((php_libxml_node_ptr *)intern->ptr)->node;
+					}
 					curnode = dom_get_elements_by_tag_name_ns_raw(
-						basenode, (char *) objmap->ns, (char *) objmap->local, &previndex, iter->index);
+						basenode, curnode, (char *) objmap->ns, (char *) objmap->local, &previndex, iter->index);
 				}
 			}
 		} else {
@@ -258,8 +268,8 @@ zend_object_iterator *php_dom_get_iterator(zend_class_entry *ce, zval *object, i
 {
 	dom_object *intern;
 	dom_nnodemap_object *objmap;
-	xmlNodePtr nodep, curnode=NULL;
-	int curindex = 0;
+	xmlNodePtr curnode=NULL;
+	zend_long curindex = 0;
 	HashTable *nodeht;
 	zval *entry;
 	php_dom_iterator *iterator;
@@ -270,6 +280,7 @@ zend_object_iterator *php_dom_get_iterator(zend_class_entry *ce, zval *object, i
 	}
 	iterator = emalloc(sizeof(php_dom_iterator));
 	zend_iterator_init(&iterator->intern);
+	iterator->cache_tag.modification_nr = 0;
 
 	ZVAL_OBJ_COPY(&iterator->intern.data, Z_OBJ_P(object));
 	iterator->intern.funcs = &php_dom_iterator_funcs;
@@ -288,24 +299,25 @@ zend_object_iterator *php_dom_get_iterator(zend_class_entry *ce, zval *object, i
 					ZVAL_COPY(&iterator->curobj, entry);
 				}
 			} else {
-				nodep = (xmlNode *)dom_object_get_node(objmap->baseobj);
-				if (!nodep) {
+				xmlNodePtr basep = (xmlNode *)dom_object_get_node(objmap->baseobj);
+				if (!basep) {
 					goto err;
 				}
 				if (objmap->nodetype == XML_ATTRIBUTE_NODE || objmap->nodetype == XML_ELEMENT_NODE) {
 					if (objmap->nodetype == XML_ATTRIBUTE_NODE) {
-						curnode = (xmlNodePtr) nodep->properties;
+						curnode = (xmlNodePtr) basep->properties;
 					} else {
-						curnode = (xmlNodePtr) nodep->children;
+						curnode = dom_nodelist_iter_start_first_child(basep);
 					}
 				} else {
+					xmlNodePtr nodep = basep;
 					if (nodep->type == XML_DOCUMENT_NODE || nodep->type == XML_HTML_DOCUMENT_NODE) {
 						nodep = xmlDocGetRootElement((xmlDoc *) nodep);
 					} else {
 						nodep = nodep->children;
 					}
 					curnode = dom_get_elements_by_tag_name_ns_raw(
-						nodep, (char *) objmap->ns, (char *) objmap->local, &curindex, 0);
+						basep, nodep, (char *) objmap->ns, (char *) objmap->local, &curindex, 0);
 				}
 			}
 		} else {

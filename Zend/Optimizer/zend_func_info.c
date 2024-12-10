@@ -33,7 +33,7 @@ typedef uint32_t (*info_func_t)(const zend_call_info *call_info, const zend_ssa 
 
 typedef struct _func_info_t {
 	const char *name;
-	int         name_len;
+	unsigned    name_len;
 	uint32_t    info;
 	info_func_t info_func;
 } func_info_t;
@@ -77,9 +77,7 @@ static uint32_t zend_range_info(const zend_call_info *call_info, const zend_ssa 
 		}
 		if ((t1 & ((MAY_BE_ANY|MAY_BE_UNDEF)-MAY_BE_DOUBLE))
 				&& (t2 & ((MAY_BE_ANY|MAY_BE_UNDEF)-MAY_BE_DOUBLE))) {
-			if ((t3 & MAY_BE_ANY) != MAY_BE_DOUBLE) {
-				tmp |= MAY_BE_ARRAY_OF_LONG;
-			}
+			tmp |= MAY_BE_ARRAY_OF_LONG;
 		}
 		if (tmp & MAY_BE_ARRAY_OF_ANY) {
 			tmp |= MAY_BE_ARRAY_PACKED;
@@ -87,7 +85,7 @@ static uint32_t zend_range_info(const zend_call_info *call_info, const zend_ssa 
 		return tmp;
 	} else {
 		/* May throw */
-		return MAY_BE_RC1 | MAY_BE_ARRAY | MAY_BE_ARRAY_PACKED | MAY_BE_ARRAY_OF_LONG | MAY_BE_ARRAY_OF_DOUBLE | MAY_BE_ARRAY_OF_STRING;
+		return MAY_BE_RC1 | MAY_BE_ARRAY | MAY_BE_ARRAY_EMPTY | MAY_BE_ARRAY_PACKED | MAY_BE_ARRAY_OF_LONG | MAY_BE_ARRAY_OF_DOUBLE | MAY_BE_ARRAY_OF_STRING;
 	}
 }
 
@@ -120,7 +118,12 @@ uint32_t zend_get_internal_func_info(
 	if (info->info_func) {
 		return call_info ? info->info_func(call_info, ssa) : 0;
 	} else {
-		return info->info;
+		uint32_t ret = info->info;
+
+		if (ret & MAY_BE_ARRAY) {
+			ret |= MAY_BE_ARRAY_EMPTY;
+		}
+		return ret;
 	}
 }
 
@@ -206,7 +209,7 @@ static void zend_func_info_add(const func_info_t *func_infos, size_t n)
 	}
 }
 
-int zend_func_info_startup(void)
+zend_result zend_func_info_startup(void)
 {
 	if (zend_func_info_rid == -1) {
 		zend_func_info_rid = zend_get_resource_handle("Zend Optimizer");
@@ -223,7 +226,7 @@ int zend_func_info_startup(void)
 	return SUCCESS;
 }
 
-int zend_func_info_shutdown(void)
+zend_result zend_func_info_shutdown(void)
 {
 	if (zend_func_info_rid != -1) {
 		zend_hash_destroy(&func_info);

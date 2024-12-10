@@ -26,6 +26,11 @@
 
 #include "zend.h"
 #include "zend_globals.h"
+#include "zend_portability.h"
+
+#if __has_feature(memory_sanitizer)
+# include <sanitizer/msan_interface.h>
+#endif
 
 // Musl Libc defines this macro, glibc does not
 // According to "man 2 timer_create" this field should always be available, but it's not: https://sourceware.org/bugzilla/show_bug.cgi?id=27417
@@ -35,11 +40,23 @@
 
 ZEND_API void zend_max_execution_timer_init(void) /* {{{ */
 {
+	pid_t pid = getpid();
+
+	if (EG(pid) == pid) {
+		return;
+	}
+
 	struct sigevent sev;
 	sev.sigev_notify = SIGEV_THREAD_ID;
 	sev.sigev_value.sival_ptr = &EG(max_execution_timer_timer);
 	sev.sigev_signo = SIGRTMIN;
 	sev.sigev_notify_thread_id = (pid_t) syscall(SYS_gettid);
+
+#if __has_feature(memory_sanitizer)
+	/* MSan does not intercept timer_create() */
+	__msan_unpoison(&EG(max_execution_timer_timer),
+					sizeof(EG(max_execution_timer_timer)));
+#endif
 
 	// Measure wall time instead of CPU time as originally planned now that it is possible https://github.com/php/php-src/pull/6504#issuecomment-1370303727
 	if (timer_create(CLOCK_BOOTTIME, &sev, &EG(max_execution_timer_timer)) != 0) {
@@ -48,9 +65,9 @@ ZEND_API void zend_max_execution_timer_init(void) /* {{{ */
 
 	EG(pid) = getpid();
 
-#  ifdef MAX_EXECUTION_TIMERS_DEBUG
+# ifdef MAX_EXECUTION_TIMERS_DEBUG
 		fprintf(stderr, "Timer %#jx created on thread %d\n", (uintmax_t) EG(max_execution_timer_timer), sev.sigev_notify_thread_id);
-#  endif
+# endif
 
 	sigaction(sev.sigev_signo, NULL, &EG(oldact));
 }
@@ -64,6 +81,11 @@ void zend_max_execution_timer_settime(zend_long seconds) /* {{{ }*/
 	}
 
 	timer_t timer = EG(max_execution_timer_timer);
+
+	// Prevent EINVAL error
+	if (seconds < 0 || seconds > 999999999) {
+		seconds = 0;
+	}
 
 	struct itimerspec its;
 	its.it_value.tv_sec = seconds;

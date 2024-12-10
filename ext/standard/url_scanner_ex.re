@@ -138,9 +138,11 @@ static int php_ini_on_update_hosts(zend_ini_entry *entry, zend_string *new_value
 		}
 		keylen = q - key;
 		if (keylen > 0) {
-			tmp_key = zend_string_init(key, keylen, 0);
+			/* Note: the hash table is persistently allocated, so the strings must be too! */
+			tmp_key = zend_string_init(key, keylen, true);
+			GC_MAKE_PERSISTENT_LOCAL(tmp_key);
 			zend_hash_add_empty_element(hosts, tmp_key);
-			zend_string_release_ex(tmp_key, 0);
+			zend_string_release_ex(tmp_key, true);
 		}
 	}
 	efree(tmp);
@@ -333,7 +335,7 @@ enum {
 #define STD_PARA url_adapt_state_ex_t *ctx, char *start, char *YYCURSOR
 #define STD_ARGS ctx, start, xp
 
-#if SCANNER_DEBUG
+#ifdef SCANNER_DEBUG
 #define scdebug(x) printf x
 #else
 #define scdebug(x)
@@ -734,6 +736,7 @@ static inline int php_url_scanner_add_var_impl(const char *name, size_t name_len
 	zend_string *encoded;
 	url_adapt_state_ex_t *url_state;
 	php_output_handler_func_t handler;
+	bool should_start = false;
 
 	if (type) {
 		url_state = &BG(url_adapt_session_ex);
@@ -745,7 +748,7 @@ static inline int php_url_scanner_add_var_impl(const char *name, size_t name_len
 
 	if (!url_state->active) {
 		php_url_scanner_ex_activate(type);
-		php_output_start_internal(ZEND_STRL("URL-Rewriter"), handler, 0, PHP_OUTPUT_HANDLER_STDFLAGS);
+		should_start = true;
 		url_state->active = 1;
 	}
 
@@ -783,6 +786,10 @@ static inline int php_url_scanner_add_var_impl(const char *name, size_t name_len
 	smart_str_free(&svalue);
 	smart_str_free(&hname);
 	smart_str_free(&hvalue);
+
+	if (should_start) {
+		php_output_start_internal(ZEND_STRL("URL-Rewriter"), handler, 0, PHP_OUTPUT_HANDLER_STDFLAGS);
+	}
 
 	return SUCCESS;
 }

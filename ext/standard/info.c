@@ -104,20 +104,22 @@ static ZEND_COLD void php_info_print_stream_hash(const char *name, HashTable *ht
 				php_info_printf("\nRegistered %s => ", name);
 			}
 
-			ZEND_HASH_FOREACH_STR_KEY(ht, key) {
-				if (key) {
-					if (first) {
-						first = 0;
-					} else {
-						php_info_print(", ");
+			if (!HT_IS_PACKED(ht)) {
+				ZEND_HASH_MAP_FOREACH_STR_KEY(ht, key) {
+					if (key) {
+						if (first) {
+							first = 0;
+						} else {
+							php_info_print(", ");
+						}
+						if (!sapi_module.phpinfo_as_text) {
+							php_info_print_html_esc(ZSTR_VAL(key), ZSTR_LEN(key));
+						} else {
+							php_info_print(ZSTR_VAL(key));
+						}
 					}
-					if (!sapi_module.phpinfo_as_text) {
-						php_info_print_html_esc(ZSTR_VAL(key), ZSTR_LEN(key));
-					} else {
-						php_info_print(ZSTR_VAL(key));
-					}
-				}
-			} ZEND_HASH_FOREACH_END();
+				} ZEND_HASH_FOREACH_END();
+			}
 
 			if (!sapi_module.phpinfo_as_text) {
 				php_info_print("</td></tr>\n");
@@ -140,7 +142,7 @@ PHPAPI ZEND_COLD void php_info_print_module(zend_module_entry *zend_module) /* {
 			zend_string *url_name = php_url_encode(zend_module->name, strlen(zend_module->name));
 
 			zend_str_tolower(ZSTR_VAL(url_name), ZSTR_LEN(url_name));
-			php_info_printf("<h2><a name=\"module_%s\">%s</a></h2>\n", ZSTR_VAL(url_name), zend_module->name);
+			php_info_printf("<h2><a name=\"module_%s\" href=\"#module_%s\">%s</a></h2>\n", ZSTR_VAL(url_name), ZSTR_VAL(url_name), zend_module->name);
 
 			efree(url_name);
 		} else {
@@ -651,6 +653,11 @@ void php_get_windows_cpu(char *buf, int bufsize)
 			snprintf(buf, bufsize, "AMD64");
 			break;
 #endif
+#if defined(PROCESSOR_ARCHITECTURE_ARM64)
+		case PROCESSOR_ARCHITECTURE_ARM64 :
+			snprintf(buf, bufsize, "ARM64");
+			break;
+#endif
 		case PROCESSOR_ARCHITECTURE_UNKNOWN :
 		default:
 			snprintf(buf, bufsize, "Unknown");
@@ -907,13 +914,13 @@ PHPAPI ZEND_COLD void php_print_info(int flag)
 		php_info_print_table_row(2, "Zend Max Execution Timers", "disabled" );
 #endif
 
-#if HAVE_IPV6
+#ifdef HAVE_IPV6
 		php_info_print_table_row(2, "IPv6 Support", "enabled" );
 #else
 		php_info_print_table_row(2, "IPv6 Support", "disabled" );
 #endif
 
-#if HAVE_DTRACE
+#ifdef HAVE_DTRACE
 		php_info_print_table_row(2, "DTrace Support", (zend_dtrace_enabled ? "enabled" : "available, disabled"));
 #else
 		php_info_print_table_row(2, "DTrace Support", "disabled" );
@@ -965,7 +972,7 @@ PHPAPI ZEND_COLD void php_print_info(int flag)
 		zend_hash_copy(&sorted_registry, &module_registry, NULL);
 		zend_hash_sort(&sorted_registry, module_name_cmp, 0);
 
-		ZEND_HASH_FOREACH_PTR(&sorted_registry, module) {
+		ZEND_HASH_MAP_FOREACH_PTR(&sorted_registry, module) {
 			if (module->info_func || module->version) {
 				php_info_print_module(module);
 			}
@@ -974,7 +981,7 @@ PHPAPI ZEND_COLD void php_print_info(int flag)
 		SECTION("Additional Modules");
 		php_info_print_table_start();
 		php_info_print_table_header(1, "Module Name");
-		ZEND_HASH_FOREACH_PTR(&sorted_registry, module) {
+		ZEND_HASH_MAP_FOREACH_PTR(&sorted_registry, module) {
 			if (!module->info_func && !module->version) {
 				php_info_print_module(module);
 			}
@@ -1259,28 +1266,6 @@ PHPAPI ZEND_COLD void php_info_print_table_row_ex(int num_cols, const char *valu
 	va_start(row_elements, value_class);
 	php_info_print_table_row_internal(num_cols, value_class, row_elements);
 	va_end(row_elements);
-}
-/* }}} */
-
-/* {{{ register_phpinfo_constants */
-void register_phpinfo_constants(INIT_FUNC_ARGS)
-{
-	REGISTER_LONG_CONSTANT("INFO_GENERAL", PHP_INFO_GENERAL, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("INFO_CREDITS", PHP_INFO_CREDITS, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("INFO_CONFIGURATION", PHP_INFO_CONFIGURATION, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("INFO_MODULES", PHP_INFO_MODULES, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("INFO_ENVIRONMENT", PHP_INFO_ENVIRONMENT, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("INFO_VARIABLES", PHP_INFO_VARIABLES, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("INFO_LICENSE", PHP_INFO_LICENSE, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("INFO_ALL", PHP_INFO_ALL, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("CREDITS_GROUP",	PHP_CREDITS_GROUP, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("CREDITS_GENERAL",	PHP_CREDITS_GENERAL, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("CREDITS_SAPI",	PHP_CREDITS_SAPI, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("CREDITS_MODULES",	PHP_CREDITS_MODULES, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("CREDITS_DOCS",	PHP_CREDITS_DOCS, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("CREDITS_FULLPAGE",	PHP_CREDITS_FULLPAGE, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("CREDITS_QA",	PHP_CREDITS_QA, CONST_PERSISTENT|CONST_CS);
-	REGISTER_LONG_CONSTANT("CREDITS_ALL",	PHP_CREDITS_ALL, CONST_PERSISTENT|CONST_CS);
 }
 /* }}} */
 

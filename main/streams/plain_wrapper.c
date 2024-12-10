@@ -43,6 +43,7 @@
 # include "win32/time.h"
 # include "win32/ioutil.h"
 # include "win32/readdir.h"
+# include <limits.h>
 #endif
 
 #define php_stream_fopen_from_fd_int(fd, mode, persistent_id)	_php_stream_fopen_from_fd_int((fd), (mode), (persistent_id) STREAMS_CC)
@@ -56,7 +57,7 @@ extern int php_get_gid_by_name(const char *name, gid_t *gid);
 #endif
 
 #if defined(PHP_WIN32)
-# define PLAIN_WRAP_BUF_SIZE(st) (((st) > UINT_MAX) ? UINT_MAX : (unsigned int)(st))
+# define PLAIN_WRAP_BUF_SIZE(st) ((unsigned int)(st > INT_MAX ? INT_MAX : st))
 #define fsync _commit
 #define fdatasync fsync
 #else
@@ -261,9 +262,9 @@ static void detect_is_seekable(php_stdio_stream_data *self) {
 		self->is_pipe = S_ISFIFO(self->sb.st_mode);
 	}
 #elif defined(PHP_WIN32)
-	zend_uintptr_t handle = _get_osfhandle(self->fd);
+	uintptr_t handle = _get_osfhandle(self->fd);
 
-	if (handle != (zend_uintptr_t)INVALID_HANDLE_VALUE) {
+	if (handle != (uintptr_t)INVALID_HANDLE_VALUE) {
 		DWORD file_type = GetFileType((HANDLE)handle);
 
 		self->is_seekable = !(file_type == FILE_TYPE_PIPE || file_type == FILE_TYPE_CHAR);
@@ -277,7 +278,7 @@ static void detect_is_seekable(php_stdio_stream_data *self) {
 #endif
 }
 
-PHPAPI php_stream *_php_stream_fopen_from_fd(int fd, const char *mode, const char *persistent_id STREAMS_DC)
+PHPAPI php_stream *_php_stream_fopen_from_fd(int fd, const char *mode, const char *persistent_id, bool zero_position STREAMS_DC)
 {
 	php_stream *stream = php_stream_fopen_from_fd_int_rel(fd, mode, persistent_id);
 
@@ -288,6 +289,9 @@ PHPAPI php_stream *_php_stream_fopen_from_fd(int fd, const char *mode, const cha
 		if (!self->is_seekable) {
 			stream->flags |= PHP_STREAM_FLAG_NO_SEEK;
 			stream->position = -1;
+		} else if (zero_position) {
+			ZEND_ASSERT(zend_lseek(self->fd, 0, SEEK_CUR) == 0);
+			stream->position = 0;
 		} else {
 			stream->position = zend_lseek(self->fd, 0, SEEK_CUR);
 #ifdef ESPIPE
@@ -353,11 +357,7 @@ static ssize_t php_stdiop_write(php_stream *stream, const char *buf, size_t coun
 
 	if (data->fd >= 0) {
 #ifdef PHP_WIN32
-		ssize_t bytes_written;
-		if (ZEND_SIZE_T_UINT_OVFL(count)) {
-			count = UINT_MAX;
-		}
-		bytes_written = _write(data->fd, buf, (unsigned int)count);
+		ssize_t bytes_written = _write(data->fd, buf, PLAIN_WRAP_BUF_SIZE(count));
 #else
 		ssize_t bytes_written = write(data->fd, buf, count);
 #endif
@@ -539,7 +539,7 @@ static int php_stdiop_flush(php_stream *stream)
 
 	/*
 	 * stdio buffers data in user land. By calling fflush(3), this
-	 * data is send to the kernel using write(2). fsync'ing is
+	 * data is sent to the kernel using write(2). fsync'ing is
 	 * something completely different.
 	 */
 	if (data->file) {
@@ -733,7 +733,7 @@ static int php_stdiop_set_option(php_stream *stream, int option, int value, void
 				return -1;
 			}
 
-			if ((zend_uintptr_t) ptrparam == PHP_STREAM_LOCK_SUPPORTED) {
+			if ((uintptr_t) ptrparam == PHP_STREAM_LOCK_SUPPORTED) {
 				return 0;
 			}
 
@@ -882,7 +882,11 @@ static int php_stdiop_set_option(php_stream *stream, int option, int value, void
 							size_t rounded_offset = (range->offset / gran) * gran;
 							delta = range->offset - rounded_offset;
 							loffs = (DWORD)rounded_offset;
+#ifdef _WIN64
 							hoffs = (DWORD)(rounded_offset >> 32);
+#else
+							hoffs = 0;
+#endif
 						}
 
 						/* MapViewOfFile()ing zero bytes would map to the end of the file; match *nix behavior instead */
@@ -1028,6 +1032,11 @@ static ssize_t php_plain_files_dirstream_read(php_stream *stream, char *buf, siz
 	result = readdir(dir);
 	if (result) {
 		PHP_STRLCPY(ent->d_name, result->d_name, sizeof(ent->d_name), strlen(result->d_name));
+#ifdef _DIRENT_HAVE_D_TYPE
+		ent->d_type = result->d_type;
+#else
+		ent->d_type = DT_UNKNOWN;
+#endif
 		return sizeof(php_stream_dirent);
 	}
 	return 0;
@@ -1143,7 +1152,12 @@ PHPAPI php_stream *_php_stream_fopen(const char *filename, const char *mode, zen
 		if (options & STREAM_OPEN_FOR_INCLUDE) {
 			ret = php_stream_fopen_from_fd_int_rel(fd, mode, persistent_id);
 		} else {
-			ret = php_stream_fopen_from_fd_rel(fd, mode, persistent_id);
+			/* skip the lseek(SEEK_CUR) system call to
+			 * determine the current offset because we
+			 * know newly opened files are at offset zero
+			 * (unless the file has been opened in
+			 * O_APPEND mode) */
+			ret = php_stream_fopen_from_fd_rel(fd, mode, persistent_id, (open_flags & O_APPEND) == 0);
 		}
 
 		if (ret)	{
@@ -1665,7 +1679,7 @@ not_relative_path:
 
 	/* check in provided path */
 	/* append the calling scripts' current working directory
-	 * as a fall back case
+	 * as a fallback case
 	 */
 	if (zend_is_executing() &&
 	    (exec_filename = zend_get_executed_filename_ex()) != NULL) {

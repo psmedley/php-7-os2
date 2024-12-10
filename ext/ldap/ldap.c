@@ -28,12 +28,12 @@
 
 #include "php.h"
 #include "php_ini.h"
+#include "Zend/zend_attributes.h"
 
 #include <stddef.h>
 
 #include "ext/standard/dl.h"
 #include "php_ldap.h"
-#include "ldap_arginfo.h"
 
 #ifdef PHP_WIN32
 #include <string.h>
@@ -53,6 +53,8 @@
 
 #define PHP_LDAP_ESCAPE_FILTER 0x01
 #define PHP_LDAP_ESCAPE_DN     0x02
+
+#include "ldap_arginfo.h"
 
 #if defined(LDAP_CONTROL_PAGEDRESULTS) && !defined(HAVE_LDAP_CONTROL_FIND)
 LDAPControl *ldap_control_find( const char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp)
@@ -113,7 +115,6 @@ static zend_object *ldap_link_create_object(zend_class_entry *class_type) {
 
 	zend_object_std_init(&intern->std, class_type);
 	object_properties_init(&intern->std, class_type);
-	intern->std.handlers = &ldap_link_object_handlers;
 
 	return &intern->std;
 }
@@ -159,7 +160,6 @@ static zend_object *ldap_result_create_object(zend_class_entry *class_type) {
 
 	zend_object_std_init(&intern->std, class_type);
 	object_properties_init(&intern->std, class_type);
-	intern->std.handlers = &ldap_result_object_handlers;
 
 	return &intern->std;
 }
@@ -197,7 +197,6 @@ static zend_object *ldap_result_entry_create_object(zend_class_entry *class_type
 
 	zend_object_std_init(&intern->std, class_type);
 	object_properties_init(&intern->std, class_type);
-	intern->std.handlers = &ldap_result_entry_object_handlers;
 
 	return &intern->std;
 }
@@ -413,7 +412,7 @@ static int _php_ldap_control_from_array(LDAP *ld, LDAPControl** ctrl, zval* arra
 	struct berval control_value = { 0L, NULL };
 	int control_value_alloc = 0;
 
-	if ((val = zend_hash_str_find(Z_ARRVAL_P(array), "value", sizeof("value") - 1)) != NULL) {
+	if ((val = zend_hash_find(Z_ARRVAL_P(array), ZSTR_KNOWN(ZEND_STR_VALUE))) != NULL) {
 		if (Z_TYPE_P(val) != IS_ARRAY) {
 			tmpstring = zval_get_string(val);
 			if (EG(exception)) {
@@ -635,7 +634,8 @@ static int _php_ldap_control_from_array(LDAP *ld, LDAPControl** ctrl, zval* arra
 			} else if ((tmp = zend_hash_str_find(Z_ARRVAL_P(val), "offset", sizeof("offset") - 1)) != NULL) {
 				vlvInfo.ldvlv_attrvalue = NULL;
 				vlvInfo.ldvlv_offset = zval_get_long(tmp);
-				if ((tmp = zend_hash_str_find(Z_ARRVAL_P(val), "count", sizeof("count") - 1)) != NULL) {
+				/* Find "count" key */
+				if ((tmp = zend_hash_find(Z_ARRVAL_P(val), ZSTR_KNOWN(ZEND_STR_COUNT))) != NULL) {
 					vlvInfo.ldvlv_count = zval_get_long(tmp);
 				} else {
 					rc = -1;
@@ -826,6 +826,7 @@ PHP_MINIT_FUNCTION(ldap)
 
 	ldap_link_ce = register_class_LDAP_Connection();
 	ldap_link_ce->create_object = ldap_link_create_object;
+	ldap_link_ce->default_object_handlers = &ldap_link_object_handlers;
 
 	memcpy(&ldap_link_object_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	ldap_link_object_handlers.offset = XtOffsetOf(ldap_linkdata, std);
@@ -836,6 +837,7 @@ PHP_MINIT_FUNCTION(ldap)
 
 	ldap_result_ce = register_class_LDAP_Result();
 	ldap_result_ce->create_object = ldap_result_create_object;
+	ldap_result_ce->default_object_handlers = &ldap_result_object_handlers;
 
 	memcpy(&ldap_result_object_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	ldap_result_object_handlers.offset = XtOffsetOf(ldap_resultdata, std);
@@ -846,6 +848,7 @@ PHP_MINIT_FUNCTION(ldap)
 
 	ldap_result_entry_ce = register_class_LDAP_ResultEntry();
 	ldap_result_entry_ce->create_object = ldap_result_entry_create_object;
+	ldap_result_entry_ce->default_object_handlers = &ldap_result_entry_object_handlers;
 
 	memcpy(&ldap_result_entry_object_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	ldap_result_entry_object_handlers.offset = XtOffsetOf(ldap_result_entry, std);
@@ -854,210 +857,7 @@ PHP_MINIT_FUNCTION(ldap)
 	ldap_result_entry_object_handlers.clone_obj = NULL;
 	ldap_result_entry_object_handlers.compare = zend_objects_not_comparable;
 
-	/* Constants to be used with deref-parameter in php_ldap_do_search() */
-	REGISTER_LONG_CONSTANT("LDAP_DEREF_NEVER", LDAP_DEREF_NEVER, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_DEREF_SEARCHING", LDAP_DEREF_SEARCHING, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_DEREF_FINDING", LDAP_DEREF_FINDING, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_DEREF_ALWAYS", LDAP_DEREF_ALWAYS, CONST_PERSISTENT | CONST_CS);
-
-	/* Constants to be used with ldap_modify_batch() */
-	REGISTER_LONG_CONSTANT("LDAP_MODIFY_BATCH_ADD", LDAP_MODIFY_BATCH_ADD, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_MODIFY_BATCH_REMOVE", LDAP_MODIFY_BATCH_REMOVE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_MODIFY_BATCH_REMOVE_ALL", LDAP_MODIFY_BATCH_REMOVE_ALL, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_MODIFY_BATCH_REPLACE", LDAP_MODIFY_BATCH_REPLACE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_MODIFY_BATCH_ATTRIB", LDAP_MODIFY_BATCH_ATTRIB, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_MODIFY_BATCH_MODTYPE", LDAP_MODIFY_BATCH_MODTYPE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_MODIFY_BATCH_VALUES", LDAP_MODIFY_BATCH_VALUES, CONST_PERSISTENT | CONST_CS);
-
-#if (LDAP_API_VERSION > 2000) || defined(HAVE_ORALDAP)
-	/* LDAP options */
-	REGISTER_LONG_CONSTANT("LDAP_OPT_DEREF", LDAP_OPT_DEREF, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_SIZELIMIT", LDAP_OPT_SIZELIMIT, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_TIMELIMIT", LDAP_OPT_TIMELIMIT, CONST_PERSISTENT | CONST_CS);
-#ifdef LDAP_OPT_NETWORK_TIMEOUT
-	REGISTER_LONG_CONSTANT("LDAP_OPT_NETWORK_TIMEOUT", LDAP_OPT_NETWORK_TIMEOUT, CONST_PERSISTENT | CONST_CS);
-#elif defined (LDAP_X_OPT_CONNECT_TIMEOUT)
-	REGISTER_LONG_CONSTANT("LDAP_OPT_NETWORK_TIMEOUT", LDAP_X_OPT_CONNECT_TIMEOUT, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_OPT_TIMEOUT
-	REGISTER_LONG_CONSTANT("LDAP_OPT_TIMEOUT", LDAP_OPT_TIMEOUT, CONST_PERSISTENT | CONST_CS);
-#endif
-	REGISTER_LONG_CONSTANT("LDAP_OPT_PROTOCOL_VERSION", LDAP_OPT_PROTOCOL_VERSION, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_ERROR_NUMBER", LDAP_OPT_ERROR_NUMBER, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_REFERRALS", LDAP_OPT_REFERRALS, CONST_PERSISTENT | CONST_CS);
-#ifdef LDAP_OPT_RESTART
-	REGISTER_LONG_CONSTANT("LDAP_OPT_RESTART", LDAP_OPT_RESTART, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_OPT_HOST_NAME
-	REGISTER_LONG_CONSTANT("LDAP_OPT_HOST_NAME", LDAP_OPT_HOST_NAME, CONST_PERSISTENT | CONST_CS);
-#endif
-	REGISTER_LONG_CONSTANT("LDAP_OPT_ERROR_STRING", LDAP_OPT_ERROR_STRING, CONST_PERSISTENT | CONST_CS);
-#ifdef LDAP_OPT_MATCHED_DN
-	REGISTER_LONG_CONSTANT("LDAP_OPT_MATCHED_DN", LDAP_OPT_MATCHED_DN, CONST_PERSISTENT | CONST_CS);
-#endif
-	REGISTER_LONG_CONSTANT("LDAP_OPT_SERVER_CONTROLS", LDAP_OPT_SERVER_CONTROLS, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_CLIENT_CONTROLS", LDAP_OPT_CLIENT_CONTROLS, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_OPT_DEBUG_LEVEL
-	REGISTER_LONG_CONSTANT("LDAP_OPT_DEBUG_LEVEL", LDAP_OPT_DEBUG_LEVEL, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#ifdef LDAP_OPT_DIAGNOSTIC_MESSAGE
-	REGISTER_LONG_CONSTANT("LDAP_OPT_DIAGNOSTIC_MESSAGE", LDAP_OPT_DIAGNOSTIC_MESSAGE, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#ifdef HAVE_LDAP_SASL
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_SASL_MECH", LDAP_OPT_X_SASL_MECH, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_SASL_REALM", LDAP_OPT_X_SASL_REALM, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_SASL_AUTHCID", LDAP_OPT_X_SASL_AUTHCID, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_SASL_AUTHZID", LDAP_OPT_X_SASL_AUTHZID, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_OPT_X_SASL_NOCANON
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_SASL_NOCANON", LDAP_OPT_X_SASL_NOCANON, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_OPT_X_SASL_USERNAME
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_SASL_USERNAME", LDAP_OPT_X_SASL_USERNAME, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#ifdef ORALDAP
-	REGISTER_LONG_CONSTANT("GSLC_SSL_NO_AUTH", GSLC_SSL_NO_AUTH, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("GSLC_SSL_ONEWAY_AUTH", GSLC_SSL_ONEWAY_AUTH, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("GSLC_SSL_TWOWAY_AUTH", GSLC_SSL_TWOWAY_AUTH, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#if (LDAP_API_VERSION > 2000)
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_REQUIRE_CERT", LDAP_OPT_X_TLS_REQUIRE_CERT, CONST_PERSISTENT | CONST_CS);
-
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_NEVER", LDAP_OPT_X_TLS_NEVER, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_HARD", LDAP_OPT_X_TLS_HARD, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_DEMAND", LDAP_OPT_X_TLS_DEMAND, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_ALLOW", LDAP_OPT_X_TLS_ALLOW, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_TRY", LDAP_OPT_X_TLS_TRY, CONST_PERSISTENT | CONST_CS);
-
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_CACERTDIR", LDAP_OPT_X_TLS_CACERTDIR, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_CACERTFILE", LDAP_OPT_X_TLS_CACERTFILE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_CERTFILE", LDAP_OPT_X_TLS_CERTFILE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_CIPHER_SUITE", LDAP_OPT_X_TLS_CIPHER_SUITE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_KEYFILE", LDAP_OPT_X_TLS_KEYFILE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_RANDOM_FILE", LDAP_OPT_X_TLS_RANDOM_FILE, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#ifdef LDAP_OPT_X_TLS_CRLCHECK
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_CRLCHECK", LDAP_OPT_X_TLS_CRLCHECK, CONST_PERSISTENT | CONST_CS);
-
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_CRL_NONE", LDAP_OPT_X_TLS_CRL_NONE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_CRL_PEER", LDAP_OPT_X_TLS_CRL_PEER, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_CRL_ALL", LDAP_OPT_X_TLS_CRL_ALL, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#ifdef LDAP_OPT_X_TLS_DHFILE
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_DHFILE", LDAP_OPT_X_TLS_DHFILE, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#ifdef LDAP_OPT_X_TLS_CRLFILE
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_CRLFILE", LDAP_OPT_X_TLS_CRLFILE, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#ifdef LDAP_OPT_X_TLS_PROTOCOL_MIN
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_PROTOCOL_MIN", LDAP_OPT_X_TLS_PROTOCOL_MIN, CONST_PERSISTENT | CONST_CS);
-
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_PROTOCOL_SSL2", LDAP_OPT_X_TLS_PROTOCOL_SSL2, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_PROTOCOL_SSL3", LDAP_OPT_X_TLS_PROTOCOL_SSL3, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_PROTOCOL_TLS1_0", LDAP_OPT_X_TLS_PROTOCOL_TLS1_0, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_PROTOCOL_TLS1_1", LDAP_OPT_X_TLS_PROTOCOL_TLS1_1, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_PROTOCOL_TLS1_2", LDAP_OPT_X_TLS_PROTOCOL_TLS1_2, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#ifdef LDAP_OPT_X_TLS_PACKAGE
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_TLS_PACKAGE", LDAP_OPT_X_TLS_PACKAGE, CONST_PERSISTENT | CONST_CS);
-#endif
-
-#ifdef LDAP_OPT_X_KEEPALIVE_IDLE
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_KEEPALIVE_IDLE", LDAP_OPT_X_KEEPALIVE_IDLE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_KEEPALIVE_PROBES", LDAP_OPT_X_KEEPALIVE_PROBES, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_OPT_X_KEEPALIVE_INTERVAL", LDAP_OPT_X_KEEPALIVE_INTERVAL, CONST_PERSISTENT | CONST_CS);
-#endif
-
-	REGISTER_LONG_CONSTANT("LDAP_ESCAPE_FILTER", PHP_LDAP_ESCAPE_FILTER, CONST_PERSISTENT | CONST_CS);
-	REGISTER_LONG_CONSTANT("LDAP_ESCAPE_DN", PHP_LDAP_ESCAPE_DN, CONST_PERSISTENT | CONST_CS);
-
-#ifdef HAVE_LDAP_EXTENDED_OPERATION_S
-	REGISTER_STRING_CONSTANT("LDAP_EXOP_START_TLS", LDAP_EXOP_START_TLS, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_EXOP_MODIFY_PASSWD", LDAP_EXOP_MODIFY_PASSWD, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_EXOP_REFRESH", LDAP_EXOP_REFRESH, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_EXOP_WHO_AM_I", LDAP_EXOP_WHO_AM_I, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_EXOP_TURN", LDAP_EXOP_TURN, CONST_PERSISTENT | CONST_CS);
-#endif
-
-/* LDAP Controls */
-/*	standard track controls */
-#ifdef LDAP_CONTROL_MANAGEDSAIT
-	/* RFC 3296 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_MANAGEDSAIT", LDAP_CONTROL_MANAGEDSAIT, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_PROXY_AUTHZ
-	/* RFC 4370 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_PROXY_AUTHZ", LDAP_CONTROL_PROXY_AUTHZ, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_SUBENTRIES
-	/* RFC 3672 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_SUBENTRIES", LDAP_CONTROL_SUBENTRIES, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_VALUESRETURNFILTER
-	/* RFC 3876 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_VALUESRETURNFILTER", LDAP_CONTROL_VALUESRETURNFILTER, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_ASSERT
-	/* RFC 4528 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_ASSERT", LDAP_CONTROL_ASSERT, CONST_PERSISTENT | CONST_CS);
-	/* RFC 4527 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_PRE_READ", LDAP_CONTROL_PRE_READ, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_POST_READ", LDAP_CONTROL_POST_READ, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_SORTREQUEST
-	/* RFC 2891 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_SORTREQUEST", LDAP_CONTROL_SORTREQUEST, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_SORTRESPONSE", LDAP_CONTROL_SORTRESPONSE, CONST_PERSISTENT | CONST_CS);
-#endif
-/*	non-standard track controls */
-#ifdef LDAP_CONTROL_PAGEDRESULTS
-	/* RFC 2696 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_PAGEDRESULTS", LDAP_CONTROL_PAGEDRESULTS, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_AUTHZID_REQUEST
-	/* RFC 3829 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_AUTHZID_REQUEST", LDAP_CONTROL_AUTHZID_REQUEST, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_AUTHZID_RESPONSE", LDAP_CONTROL_AUTHZID_RESPONSE, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_SYNC
-	/* LDAP Content Synchronization Operation -- RFC 4533 */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_SYNC", LDAP_CONTROL_SYNC, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_SYNC_STATE", LDAP_CONTROL_SYNC_STATE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_SYNC_DONE", LDAP_CONTROL_SYNC_DONE, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_DONTUSECOPY
-	/* LDAP Don't Use Copy Control (RFC 6171) */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_DONTUSECOPY", LDAP_CONTROL_DONTUSECOPY, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_PASSWORDPOLICYREQUEST
-	/* Password policy Controls */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_PASSWORDPOLICYREQUEST", LDAP_CONTROL_PASSWORDPOLICYREQUEST, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_PASSWORDPOLICYRESPONSE", LDAP_CONTROL_PASSWORDPOLICYRESPONSE, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_X_INCREMENTAL_VALUES
-	/* MS Active Directory controls */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_X_INCREMENTAL_VALUES", LDAP_CONTROL_X_INCREMENTAL_VALUES, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_X_DOMAIN_SCOPE", LDAP_CONTROL_X_DOMAIN_SCOPE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_X_PERMISSIVE_MODIFY", LDAP_CONTROL_X_PERMISSIVE_MODIFY, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_X_SEARCH_OPTIONS", LDAP_CONTROL_X_SEARCH_OPTIONS, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_X_TREE_DELETE", LDAP_CONTROL_X_TREE_DELETE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_X_EXTENDED_DN", LDAP_CONTROL_X_EXTENDED_DN, CONST_PERSISTENT | CONST_CS);
-#endif
-#ifdef LDAP_CONTROL_VLVREQUEST
-	/* LDAP VLV */
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_VLVREQUEST", LDAP_CONTROL_VLVREQUEST, CONST_PERSISTENT | CONST_CS);
-	REGISTER_STRING_CONSTANT("LDAP_CONTROL_VLVRESPONSE", LDAP_CONTROL_VLVRESPONSE, CONST_PERSISTENT | CONST_CS);
-#endif
+	register_ldap_symbols(module_number);
 
 	ldap_module_entry.type = type;
 
@@ -1125,6 +925,10 @@ PHP_FUNCTION(ldap_connect)
 #endif
 	ldap_linkdata *ld;
 	LDAP *ldap = NULL;
+
+	if (ZEND_NUM_ARGS() == 2) {
+	    zend_error(E_DEPRECATED, "Usage of ldap_connect with two arguments is deprecated");
+	}
 
 #ifdef HAVE_ORALDAP
 	if (ZEND_NUM_ARGS() == 3 || ZEND_NUM_ARGS() == 4) {
@@ -1211,6 +1015,75 @@ PHP_FUNCTION(ldap_connect)
 
 }
 /* }}} */
+
+#if defined(HAVE_ORALDAP) && defined(LDAP_API_FEATURE_X_OPENLDAP)
+PHP_FUNCTION(ldap_connect_wallet) {
+	char *host = NULL;
+	size_t hostlen = 0;
+	char *wallet = NULL, *walletpasswd = NULL;
+	size_t walletlen = 0, walletpasswdlen = 0;
+	zend_long authmode = GSLC_SSL_NO_AUTH;
+	bool ssl = false;
+
+	ldap_linkdata *ld;
+	LDAP *ldap = NULL;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s!ss|l",
+		&host, &hostlen, &wallet, &walletlen, &walletpasswd, &walletpasswdlen, &authmode) != SUCCESS
+	) {
+		RETURN_THROWS();
+	}
+
+	if (authmode != 0) {
+		ssl = true;
+	}
+
+	if (LDAPG(max_links) != -1 && LDAPG(num_links) >= LDAPG(max_links)) {
+		php_error_docref(NULL, E_WARNING, "Too many open links (" ZEND_LONG_FMT ")", LDAPG(num_links));
+		RETURN_FALSE;
+	}
+
+	object_init_ex(return_value, ldap_link_ce);
+	ld = Z_LDAP_LINK_P(return_value);
+
+	{
+		int rc = LDAP_SUCCESS;
+		char *url = host;
+		if (url && !ldap_is_ldap_url(url)) {
+			size_t urllen = hostlen + sizeof( "ldap://:65535" );
+
+			url = emalloc(urllen);
+			snprintf( url, urllen, "ldap://%s", host );
+		}
+
+		/* ldap_init() is deprecated, use ldap_initialize() instead. */
+		rc = ldap_initialize(&ldap, url);
+		if (url != host) {
+			efree(url);
+		}
+		if (rc != LDAP_SUCCESS) {
+			zval_ptr_dtor(return_value);
+			php_error_docref(NULL, E_WARNING, "Could not create session handle: %s", ldap_err2string(rc));
+			RETURN_FALSE;
+		}
+	}
+
+	if (ldap == NULL) {
+		zval_ptr_dtor(return_value);
+		RETURN_FALSE;
+	} else {
+		if (ssl) {
+			if (ldap_init_SSL(&ldap->ld_sb, wallet, walletpasswd, authmode)) {
+				zval_ptr_dtor(return_value);
+				php_error_docref(NULL, E_WARNING, "SSL init failed");
+				RETURN_FALSE;
+			}
+		}
+		LDAPG(num_links)++;
+		ld->link = ldap;
+	}
+}
+#endif
 
 /* {{{ _get_lderrno */
 static int _get_lderrno(LDAP *ldap)
@@ -1630,6 +1503,11 @@ static void php_ldap_do_search(INTERNAL_FUNCTION_PARAMETERS, int scope)
 			ret = 0;
 			goto cleanup;
 		}
+		if (!zend_array_is_list(Z_ARRVAL_P(link))) {
+			zend_argument_value_error(1, "must be a list");
+			ret = 0;
+			goto cleanup;
+		}
 
 		if (base_dn_ht) {
 			nbases = zend_hash_num_elements(base_dn_ht);
@@ -1803,7 +1681,7 @@ cleanup_parallel:
 			result->result = ldap_res;
 		}
 	} else {
-		zend_argument_type_error(1, "must be of type LDAP|array, %s given", zend_zval_type_name(link));
+		zend_argument_type_error(1, "must be of type LDAP|array, %s given", zend_zval_value_name(link));
 	}
 
 cleanup:
@@ -2346,17 +2224,11 @@ static void php_ldap_do_modify(INTERNAL_FUNCTION_PARAMETERS, int oper, int ext)
 			ldap_mods[i]->mod_type = estrndup(ZSTR_VAL(attribute), ZSTR_LEN(attribute));
 		} else {
 			php_error_docref(NULL, E_WARNING, "Unknown attribute in the data");
-			/* Free allocated memory */
-			while (i >= 0) {
-				if (ldap_mods[i]->mod_type) {
-					efree(ldap_mods[i]->mod_type);
-				}
-				efree(ldap_mods[i]);
-				i--;
-			}
-			efree(num_berval);
-			efree(ldap_mods);
-			RETURN_FALSE;
+			RETVAL_FALSE;
+			num_berval[i] = 0;
+			num_attribs = i + 1;
+			ldap_mods[i]->mod_bvalues = NULL;
+			goto cleanup;
 		}
 
 		value = zend_hash_get_current_data(Z_ARRVAL_P(entry));
@@ -2377,6 +2249,8 @@ static void php_ldap_do_modify(INTERNAL_FUNCTION_PARAMETERS, int oper, int ext)
 			convert_to_string(value);
 			if (EG(exception)) {
 				RETVAL_FALSE;
+				num_berval[i] = 0;
+				num_attribs = i + 1;
 				goto cleanup;
 			}
 			ldap_mods[i]->mod_bvalues[0] = (struct berval *) emalloc (sizeof(struct berval));
@@ -2393,6 +2267,8 @@ static void php_ldap_do_modify(INTERNAL_FUNCTION_PARAMETERS, int oper, int ext)
 				}
 				convert_to_string(ivalue);
 				if (EG(exception)) {
+					num_berval[i] = j;
+					num_attribs = i + 1;
 					RETVAL_FALSE;
 					goto cleanup;
 				}
@@ -2745,8 +2621,11 @@ PHP_FUNCTION(ldap_modify_batch)
 			/* for the modification hashtable... */
 			zend_hash_internal_pointer_reset(Z_ARRVAL_P(mod));
 			num_modprops = zend_hash_num_elements(Z_ARRVAL_P(mod));
+			bool has_attrib_key = false;
+			bool has_modtype_key = false;
 
 			for (j = 0; j < num_modprops; j++) {
+
 				/* are the keys strings? */
 				if (zend_hash_get_current_key(Z_ARRVAL_P(mod), &modkey, &tmpUlong) != HASH_KEY_IS_STRING) {
 					zend_argument_type_error(3, "must only contain string-indexed arrays");
@@ -2768,8 +2647,9 @@ PHP_FUNCTION(ldap_modify_batch)
 
 				/* does the value type match the key? */
 				if (_ldap_str_equal_to_const(ZSTR_VAL(modkey), ZSTR_LEN(modkey), LDAP_MODIFY_BATCH_ATTRIB)) {
+					has_attrib_key = true;
 					if (Z_TYPE_P(modinfo) != IS_STRING) {
-						zend_type_error("%s(): Option \"" LDAP_MODIFY_BATCH_ATTRIB "\" must be of type string, %s given", get_active_function_name(), zend_zval_type_name(modinfo));
+						zend_type_error("%s(): Option \"" LDAP_MODIFY_BATCH_ATTRIB "\" must be of type string, %s given", get_active_function_name(), zend_zval_value_name(modinfo));
 						RETURN_THROWS();
 					}
 
@@ -2779,8 +2659,9 @@ PHP_FUNCTION(ldap_modify_batch)
 					}
 				}
 				else if (_ldap_str_equal_to_const(ZSTR_VAL(modkey), ZSTR_LEN(modkey), LDAP_MODIFY_BATCH_MODTYPE)) {
+					has_modtype_key = true;
 					if (Z_TYPE_P(modinfo) != IS_LONG) {
-						zend_type_error("%s(): Option \"" LDAP_MODIFY_BATCH_MODTYPE "\" must be of type int, %s given", get_active_function_name(), zend_zval_type_name(modinfo));
+						zend_type_error("%s(): Option \"" LDAP_MODIFY_BATCH_MODTYPE "\" must be of type int, %s given", get_active_function_name(), zend_zval_value_name(modinfo));
 						RETURN_THROWS();
 					}
 
@@ -2812,7 +2693,7 @@ PHP_FUNCTION(ldap_modify_batch)
 				}
 				else if (_ldap_str_equal_to_const(ZSTR_VAL(modkey), ZSTR_LEN(modkey), LDAP_MODIFY_BATCH_VALUES)) {
 					if (Z_TYPE_P(modinfo) != IS_ARRAY) {
-						zend_type_error("%s(): Option \"" LDAP_MODIFY_BATCH_VALUES "\" must be of type array, %s given", get_active_function_name(), zend_zval_type_name(modinfo));
+						zend_type_error("%s(): Option \"" LDAP_MODIFY_BATCH_VALUES "\" must be of type array, %s given", get_active_function_name(), zend_zval_value_name(modinfo));
 						RETURN_THROWS();
 					}
 
@@ -2841,6 +2722,15 @@ PHP_FUNCTION(ldap_modify_batch)
 				}
 
 				zend_hash_move_forward(Z_ARRVAL_P(mod));
+			}
+
+			if (!has_attrib_key) {
+				zend_value_error("%s(): Required option \"" LDAP_MODIFY_BATCH_ATTRIB "\" is missing", get_active_function_name());
+				RETURN_THROWS();
+			}
+			if (!has_modtype_key) {
+				zend_value_error("%s(): Required option \"" LDAP_MODIFY_BATCH_MODTYPE "\" is missing", get_active_function_name());
+				RETURN_THROWS();
 			}
 		}
 	}
@@ -3401,7 +3291,7 @@ PHP_FUNCTION(ldap_set_option)
 			int rc;
 
 			if (Z_TYPE_P(newval) != IS_ARRAY) {
-				zend_argument_type_error(3, "must be of type array for the LDAP_OPT_CLIENT_CONTROLS option, %s given", zend_zval_type_name(newval));
+				zend_argument_type_error(3, "must be of type array for the LDAP_OPT_CLIENT_CONTROLS option, %s given", zend_zval_value_name(newval));
 				RETURN_THROWS();
 			}
 
@@ -4026,9 +3916,7 @@ PHP_FUNCTION(ldap_8859_to_t61)
 
 /* {{{ Extended operations, Pierangelo Masarati */
 #ifdef HAVE_LDAP_EXTENDED_OPERATION_S
-/* {{{ Extended operation */
-PHP_FUNCTION(ldap_exop)
-{
+static void php_ldap_exop(INTERNAL_FUNCTION_PARAMETERS, bool force_sync) {
 	zval *serverctrls = NULL;
 	zval *link, *retdata = NULL, *retoid = NULL;
 	char *lretoid = NULL;
@@ -4062,7 +3950,7 @@ PHP_FUNCTION(ldap_exop)
 		}
 	}
 
-	if (retdata) {
+	if (force_sync || retdata) {
 		/* synchronous call */
 		rc = ldap_extended_operation_s(ld->link, ZSTR_VAL(reqoid),
 			lreqdata.bv_len > 0 ? &lreqdata: NULL,
@@ -4121,12 +4009,23 @@ PHP_FUNCTION(ldap_exop)
 	result = Z_LDAP_RESULT_P(return_value);
 	result->result = ldap_res;
 
-	cleanup:
+cleanup:
 	if (lserverctrls) {
 		_php_ldap_controls_free(&lserverctrls);
 	}
 }
+
+/* {{{ Extended operation */
+PHP_FUNCTION(ldap_exop)
+{
+	php_ldap_exop(INTERNAL_FUNCTION_PARAM_PASSTHRU, false);
+}
 /* }}} */
+
+PHP_FUNCTION(ldap_exop_sync)
+{
+	php_ldap_exop(INTERNAL_FUNCTION_PARAM_PASSTHRU, true);
+}
 #endif
 
 #ifdef HAVE_LDAP_PASSWD

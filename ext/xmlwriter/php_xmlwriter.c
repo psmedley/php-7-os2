@@ -82,7 +82,6 @@ static zend_object *xmlwriter_object_new(zend_class_entry *class_type)
 	intern = zend_object_alloc(sizeof(ze_xmlwriter_object), class_type);
 	zend_object_std_init(&intern->std, class_type);
 	object_properties_init(&intern->std, class_type);
-	intern->std.handlers = &xmlwriter_object_handlers;
 
 	return &intern->std;
 }
@@ -158,7 +157,7 @@ static char *_xmlwriter_get_valid_file_path(char *source, char *resolved_path, i
 		dir_len = php_dirname(file_dirname, strlen(source));
 
 		if (dir_len > 0) {
-			zend_stat_t buf;
+			zend_stat_t buf = {0};
 			if (php_sys_stat(file_dirname, &buf) != 0) {
 				xmlFreeURI(uri);
 				return NULL;
@@ -219,14 +218,9 @@ static void php_xmlwriter_string_arg(INTERNAL_FUNCTION_PARAMETERS, xmlwriter_rea
 		XMLW_NAME_CHK(2, subject_name);
 	}
 
-	if (ptr) {
-		retval = internal_function(ptr, (xmlChar *) name);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = internal_function(ptr, (xmlChar *) name);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 
 static void php_xmlwriter_end(INTERNAL_FUNCTION_PARAMETERS, xmlwriter_read_int_t internal_function)
@@ -240,14 +234,9 @@ static void php_xmlwriter_end(INTERNAL_FUNCTION_PARAMETERS, xmlwriter_read_int_t
 	}
 	XMLWRITER_FROM_OBJECT(ptr, self);
 
-	if (ptr) {
-		retval = internal_function(ptr);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = internal_function(ptr);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 
 /* {{{ Toggle indentation on/off - returns FALSE on error */
@@ -263,14 +252,9 @@ PHP_FUNCTION(xmlwriter_set_indent)
 	}
 	XMLWRITER_FROM_OBJECT(ptr, self);
 
-	if (ptr) {
-		retval = xmlTextWriterSetIndent(ptr, indent);
-		if (retval == 0) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterSetIndent(ptr, indent);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval == 0);
 }
 /* }}} */
 
@@ -312,14 +296,9 @@ PHP_FUNCTION(xmlwriter_start_attribute_ns)
 
 	XMLW_NAME_CHK(3, "attribute name");
 
-	if (ptr) {
-		retval = xmlTextWriterStartAttributeNS(ptr, (xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterStartAttributeNS(ptr, (xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -340,14 +319,9 @@ PHP_FUNCTION(xmlwriter_write_attribute)
 
 	XMLW_NAME_CHK(2, "attribute name");
 
-	if (ptr) {
-		retval = xmlTextWriterWriteAttribute(ptr, (xmlChar *)name, (xmlChar *)content);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterWriteAttribute(ptr, (xmlChar *)name, (xmlChar *)content);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -368,14 +342,9 @@ PHP_FUNCTION(xmlwriter_write_attribute_ns)
 
 	XMLW_NAME_CHK(3, "attribute name");
 
-	if (ptr) {
-		retval = xmlTextWriterWriteAttributeNS(ptr, (xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri, (xmlChar *)content);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterWriteAttributeNS(ptr, (xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri, (xmlChar *)content);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -403,15 +372,9 @@ PHP_FUNCTION(xmlwriter_start_element_ns)
 
 	XMLW_NAME_CHK(3, "element name");
 
-	if (ptr) {
-		retval = xmlTextWriterStartElementNS(ptr, (xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
+	retval = xmlTextWriterStartElementNS(ptr, (xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri);
 
-	}
-
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -446,25 +409,17 @@ PHP_FUNCTION(xmlwriter_write_element)
 
 	XMLW_NAME_CHK(2, "element name");
 
-	if (ptr) {
-		if (!content) {
-			retval = xmlTextWriterStartElement(ptr, (xmlChar *)name);
-			if (retval == -1) {
-				RETURN_FALSE;
-			}
-			retval = xmlTextWriterEndElement(ptr);
-			if (retval == -1) {
-				RETURN_FALSE;
-			}
-		} else {
-			retval = xmlTextWriterWriteElement(ptr, (xmlChar *)name, (xmlChar *)content);
+	if (!content) {
+		retval = xmlTextWriterStartElement(ptr, (xmlChar *)name);
+		if (retval == -1) {
+			RETURN_FALSE;
 		}
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
+		retval = xmlTextWriterEndElement(ptr);
+	} else {
+		retval = xmlTextWriterWriteElement(ptr, (xmlChar *)name, (xmlChar *)content);
 	}
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -485,25 +440,17 @@ PHP_FUNCTION(xmlwriter_write_element_ns)
 
 	XMLW_NAME_CHK(3, "element name");
 
-	if (ptr) {
-		if (!content) {
-			retval = xmlTextWriterStartElementNS(ptr,(xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri);
-            if (retval == -1) {
-                RETURN_FALSE;
-            }
-			retval = xmlTextWriterEndElement(ptr);
-            if (retval == -1) {
-                RETURN_FALSE;
-            }
-		} else {
-			retval = xmlTextWriterWriteElementNS(ptr, (xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri, (xmlChar *)content);
+	if (!content) {
+		retval = xmlTextWriterStartElementNS(ptr,(xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri);
+		if (retval == -1) {
+			RETURN_FALSE;
 		}
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
+		retval = xmlTextWriterEndElement(ptr);
+	} else {
+		retval = xmlTextWriterWriteElementNS(ptr, (xmlChar *)prefix, (xmlChar *)name, (xmlChar *)uri, (xmlChar *)content);
 	}
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -538,14 +485,9 @@ PHP_FUNCTION(xmlwriter_write_pi)
 
 	XMLW_NAME_CHK(2, "PI target");
 
-	if (ptr) {
-		retval = xmlTextWriterWritePI(ptr, (xmlChar *)name, (xmlChar *)content);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterWritePI(ptr, (xmlChar *)name, (xmlChar *)content);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -561,14 +503,9 @@ PHP_FUNCTION(xmlwriter_start_cdata)
 	}
 	XMLWRITER_FROM_OBJECT(ptr, self);
 
-	if (ptr) {
-		retval = xmlTextWriterStartCDATA(ptr);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterStartCDATA(ptr);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -612,14 +549,9 @@ PHP_FUNCTION(xmlwriter_start_comment)
 	}
 	XMLWRITER_FROM_OBJECT(ptr, self);
 
-	if (ptr) {
-		retval = xmlTextWriterStartComment(ptr);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterStartComment(ptr);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -651,14 +583,9 @@ PHP_FUNCTION(xmlwriter_start_document)
 	}
 	XMLWRITER_FROM_OBJECT(ptr, self);
 
-	if (ptr) {
-		retval = xmlTextWriterStartDocument(ptr, version, enc, alone);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterStartDocument(ptr, version, enc, alone);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -683,14 +610,9 @@ PHP_FUNCTION(xmlwriter_start_dtd)
 	}
 	XMLWRITER_FROM_OBJECT(ptr, self);
 
-	if (ptr) {
-		retval = xmlTextWriterStartDTD(ptr, (xmlChar *)name, (xmlChar *)pubid, (xmlChar *)sysid);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterStartDTD(ptr, (xmlChar *)name, (xmlChar *)pubid, (xmlChar *)sysid);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -715,14 +637,9 @@ PHP_FUNCTION(xmlwriter_write_dtd)
 	}
 	XMLWRITER_FROM_OBJECT(ptr, self);
 
-	if (ptr) {
-		retval = xmlTextWriterWriteDTD(ptr, (xmlChar *)name, (xmlChar *)pubid, (xmlChar *)sysid, (xmlChar *)subset);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterWriteDTD(ptr, (xmlChar *)name, (xmlChar *)pubid, (xmlChar *)sysid, (xmlChar *)subset);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -757,14 +674,9 @@ PHP_FUNCTION(xmlwriter_write_dtd_element)
 
 	XMLW_NAME_CHK(2, "element name");
 
-	if (ptr) {
-		retval = xmlTextWriterWriteDTDElement(ptr, (xmlChar *)name, (xmlChar *)content);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterWriteDTDElement(ptr, (xmlChar *)name, (xmlChar *)content);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -799,14 +711,9 @@ PHP_FUNCTION(xmlwriter_write_dtd_attlist)
 
 	XMLW_NAME_CHK(2, "element name");
 
-	if (ptr) {
-		retval = xmlTextWriterWriteDTDAttlist(ptr, (xmlChar *)name, (xmlChar *)content);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterWriteDTDAttlist(ptr, (xmlChar *)name, (xmlChar *)content);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -827,14 +734,9 @@ PHP_FUNCTION(xmlwriter_start_dtd_entity)
 
 	XMLW_NAME_CHK(2, "attribute name");
 
-	if (ptr) {
-		retval = xmlTextWriterStartDTDEntity(ptr, isparm, (xmlChar *)name);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterStartDTDEntity(ptr, isparm, (xmlChar *)name);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -867,14 +769,9 @@ PHP_FUNCTION(xmlwriter_write_dtd_entity)
 
 	XMLW_NAME_CHK(2, "element name");
 
-	if (ptr) {
-		retval = xmlTextWriterWriteDTDEntity(ptr, pe, (xmlChar *)name, (xmlChar *)pubid, (xmlChar *)sysid, (xmlChar *)ndataid, (xmlChar *)content);
-		if (retval != -1) {
-			RETURN_TRUE;
-		}
-	}
+	retval = xmlTextWriterWriteDTDEntity(ptr, pe, (xmlChar *)name, (xmlChar *)pubid, (xmlChar *)sysid, (xmlChar *)ndataid, (xmlChar *)content);
 
-	RETURN_FALSE;
+	RETURN_BOOL(retval != -1);
 }
 /* }}} */
 
@@ -997,25 +894,20 @@ static void php_xmlwriter_flush(INTERNAL_FUNCTION_PARAMETERS, int force_string) 
 	}
 	XMLWRITER_FROM_OBJECT(ptr, self);
 
-	if (ptr) {
-		buffer = Z_XMLWRITER_P(self)->output;
-		if (force_string == 1 && buffer == NULL) {
-			RETURN_EMPTY_STRING();
-		}
-		output_bytes = xmlTextWriterFlush(ptr);
-		if (buffer) {
-			const xmlChar *content = xmlBufferContent(buffer);
-			RETVAL_STRING((const char *) content);
-			if (empty) {
-				xmlBufferEmpty(buffer);
-			}
-		} else {
-			RETVAL_LONG(output_bytes);
-		}
-		return;
+	buffer = Z_XMLWRITER_P(self)->output;
+	if (force_string == 1 && buffer == NULL) {
+		RETURN_EMPTY_STRING();
 	}
-
-	RETURN_EMPTY_STRING();
+	output_bytes = xmlTextWriterFlush(ptr);
+	if (buffer) {
+		const xmlChar *content = xmlBufferContent(buffer);
+		RETVAL_STRING((const char *) content);
+		if (empty) {
+			xmlBufferEmpty(buffer);
+		}
+	} else {
+		RETVAL_LONG(output_bytes);
+	}
 }
 /* }}} */
 
@@ -1043,6 +935,7 @@ static PHP_MINIT_FUNCTION(xmlwriter)
 	xmlwriter_object_handlers.clone_obj = NULL;
 	xmlwriter_class_entry_ce = register_class_XMLWriter();
 	xmlwriter_class_entry_ce->create_object = xmlwriter_object_new;
+	xmlwriter_class_entry_ce->default_object_handlers = &xmlwriter_object_handlers;
 
 	return SUCCESS;
 }

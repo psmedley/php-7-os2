@@ -150,6 +150,7 @@ add_op1_def:
 		case ZEND_POST_DEC:
 		case ZEND_BIND_GLOBAL:
 		case ZEND_BIND_STATIC:
+		case ZEND_BIND_INIT_STATIC_OR_JMP:
 		case ZEND_SEND_VAR_NO_REF:
 		case ZEND_SEND_VAR_NO_REF_EX:
 		case ZEND_SEND_VAR_EX:
@@ -247,7 +248,7 @@ ZEND_API void zend_dfg_add_use_def_op(const zend_op_array *op_array, const zend_
 }
 /* }}} */
 
-int zend_build_dfg(const zend_op_array *op_array, const zend_cfg *cfg, zend_dfg *dfg, uint32_t build_flags) /* {{{ */
+void zend_build_dfg(const zend_op_array *op_array, const zend_cfg *cfg, zend_dfg *dfg, uint32_t build_flags) /* {{{ */
 {
 	int set_size;
 	zend_basic_block *blocks = cfg->blocks;
@@ -326,7 +327,5 @@ int zend_build_dfg(const zend_op_array *op_array, const zend_cfg *cfg, zend_dfg 
 
 		free_alloca(worklist, use_heap);
 	}
-
-	return SUCCESS;
 }
 /* }}} */

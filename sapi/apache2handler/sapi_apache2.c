@@ -367,20 +367,22 @@ static void php_apache_sapi_log_message_ex(const char *msg, request_rec *r)
 	}
 }
 
-static double php_apache_sapi_get_request_time(void)
+static zend_result php_apache_sapi_get_request_time(double *request_time)
 {
 	php_struct *ctx = SG(server_context);
-	return ((double) ctx->r->request_time) / 1000000.0;
+	if (!ctx) {
+		return FAILURE;
+	}
+
+	*request_time = ((double) ctx->r->request_time) / 1000000.0;
+	return SUCCESS;
 }
 
 extern zend_module_entry php_apache_module;
 
 static int php_apache2_startup(sapi_module_struct *sapi_module)
 {
-	if (php_module_startup(sapi_module, &php_apache_module, 1)==FAILURE) {
-		return FAILURE;
-	}
-	return SUCCESS;
+	return php_module_startup(sapi_module, &php_apache_module);
 }
 
 static sapi_module_struct apache2_sapi_module = {
@@ -492,14 +494,16 @@ php_apache_server_startup(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp
 		apache2_sapi_module.php_ini_path_override = apache2_php_ini_path_override;
 	}
 #ifdef ZTS
-#ifdef __OS2__
-	// 2022-04-30 SHL Get out if startup failed
-	ok = php_tsrm_startup();
-	if (!ok)
-		return HTTP_INSUFFICIENT_STORAGE;
+	int expected_threads;
+#ifdef AP_MPMQ_MAX_THREADS
+	if (ap_mpm_query(AP_MPMQ_MAX_THREADS, &expected_threads) != APR_SUCCESS) {
+		expected_threads = 1;
+	}
 #else
-	php_tsrm_startup();
+	expected_threads = 1;
 #endif
+
+	php_tsrm_startup_ex(expected_threads);
 # ifdef PHP_WIN32
 	ZEND_TSRMLS_CACHE_UPDATE();
 # elif defined(__OS2__)
@@ -592,7 +596,7 @@ typedef struct {
 		zend_string *str;
 		php_conf_rec *c = ap_get_module_config(r->per_dir_config, &php_module);
 
-		ZEND_HASH_FOREACH_STR_KEY(&c->config, str) {
+		ZEND_HASH_MAP_FOREACH_STR_KEY(&c->config, str) {
 			zend_restore_ini_entry(str, ZEND_INI_STAGE_SHUTDOWN);
 		} ZEND_HASH_FOREACH_END();
 	}

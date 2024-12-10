@@ -152,8 +152,6 @@ MYSQLND_METHOD(mysqlnd_res, read_result_metadata)(MYSQLND_RES * result, MYSQLND_
 		result->meta = NULL;
 		DBG_RETURN(FAIL);
 	}
-	/* COM_FIELD_LIST is broken and has premature EOF, thus we need to hack here and in mysqlnd_res_meta.c */
-	result->field_count = result->meta->field_count;
 
 	/*
 	  2. Follows an EOF packet, which the client of mysqlnd_read_result_metadata()
@@ -332,7 +330,7 @@ mysqlnd_query_read_result_set_header(MYSQLND_CONN_DATA * conn, MYSQLND_STMT * s)
 					/*
 					  If SERVER_MORE_RESULTS_EXISTS is set then this is either MULTI_QUERY or a CALL()
 					  The first packet after sending the query/com_execute has the bit set only
-					  in this cases. Not sure why it's a needed but it marks that the whole stream
+					  in these cases. Not sure why it's a needed but it marks that the whole stream
 					  will include many result sets. What actually matters are the bits set at the end
 					  of every result set (the EOF packet).
 					*/
@@ -735,8 +733,8 @@ MYSQLND_METHOD(mysqlnd_res, store_result_fetch_data)(MYSQLND_CONN_DATA * const c
 				UPSERT_STATUS_GET_SERVER_STATUS(conn->upsert_status));
 free_end:
 	PACKET_FREE(&row_packet);
+	DBG_INF_FMT("rows=%llu", (unsigned long long)set->row_count);
 end:
-	DBG_INF_FMT("rows=%llu", (unsigned long long)result->stored_data->row_count);
 	DBG_RETURN(ret);
 }
 /* }}} */
@@ -785,7 +783,7 @@ MYSQLND_METHOD(mysqlnd_res, store_result)(MYSQLND_RES * result,
 
 
 /* {{{ mysqlnd_res::skip_result */
-static enum_func_status
+static void
 MYSQLND_METHOD(mysqlnd_res, skip_result)(MYSQLND_RES * const result)
 {
 	bool fetched_anything;
@@ -810,7 +808,7 @@ MYSQLND_METHOD(mysqlnd_res, skip_result)(MYSQLND_RES * const result)
 					? STAT_ROWS_SKIPPED_NORMAL : STAT_ROWS_SKIPPED_PS);
 		}
 	}
-	DBG_RETURN(PASS);
+	DBG_VOID_RETURN;
 }
 /* }}} */
 
@@ -971,6 +969,13 @@ MYSQLND_METHOD(mysqlnd_res, fetch_into)(MYSQLND_RES * result, const unsigned int
 {
 	bool fetched_anything;
 	zval *row_data;
+
+	// We clean the error here because in unbuffered mode we could receive a new error
+	// and therefore consumers of this method are checking for errors
+	MYSQLND_CONN_DATA *conn = result->conn;
+	if (conn) {
+		SET_EMPTY_ERROR(conn->error_info);
+	}
 
 	DBG_ENTER("mysqlnd_res::fetch_into");
 	if (FAIL == result->m.fetch_row(result, &row_data, flags, &fetched_anything)) {

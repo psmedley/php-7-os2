@@ -171,24 +171,24 @@ static void phpdbg_dump_prototype(zval *tmp) /* {{{ */
 {
 	zval *funcname, *class, class_zv, *args, *argstmp;
 
-	funcname = zend_hash_str_find(Z_ARRVAL_P(tmp), ZEND_STRL("function"));
+	funcname = zend_hash_find(Z_ARRVAL_P(tmp), ZSTR_KNOWN(ZEND_STR_FUNCTION));
 
-	if ((class = zend_hash_str_find(Z_ARRVAL_P(tmp), ZEND_STRL("object")))) {
+	if ((class = zend_hash_find(Z_ARRVAL_P(tmp), ZSTR_KNOWN(ZEND_STR_OBJECT)))) {
 		ZVAL_NEW_STR(&class_zv, Z_OBJCE_P(class)->name);
 		class = &class_zv;
 	} else {
-		class = zend_hash_str_find(Z_ARRVAL_P(tmp), ZEND_STRL("class"));
+		class = zend_hash_find(Z_ARRVAL_P(tmp), ZSTR_KNOWN(ZEND_STR_CLASS));
 	}
 
 	if (class) {
-		zval *type = zend_hash_str_find(Z_ARRVAL_P(tmp), ZEND_STRL("type"));
+		zval *type = zend_hash_find(Z_ARRVAL_P(tmp), ZSTR_KNOWN(ZEND_STR_TYPE));
 
 		phpdbg_out("%s%s%s(", Z_STRVAL_P(class), Z_STRVAL_P(type), Z_STRVAL_P(funcname));
 	} else {
 		phpdbg_out("%s(", Z_STRVAL_P(funcname));
 	}
 
-	args = zend_hash_str_find(Z_ARRVAL_P(tmp), ZEND_STRL("args"));
+	args = zend_hash_find(Z_ARRVAL_P(tmp), ZSTR_KNOWN(ZEND_STR_ARGS));
 
 	if (args) {
 		const zend_function *func = NULL;
@@ -274,7 +274,8 @@ void phpdbg_dump_backtrace(size_t num) /* {{{ */
 	Z_STR(startfile) = zend_string_init(startfilename, strlen(startfilename), 0);
 
 	zend_hash_internal_pointer_reset_ex(Z_ARRVAL(zbacktrace), &position);
-	tmp = zend_hash_get_current_data_ex(Z_ARRVAL(zbacktrace), &position);
+
+	zval *function_name = NULL;
 	while ((tmp = zend_hash_get_current_data_ex(Z_ARRVAL(zbacktrace), &position))) {
 		if (file) { /* userland */
 			phpdbg_out("frame #%d: ", i);
@@ -287,12 +288,20 @@ void phpdbg_dump_backtrace(size_t num) /* {{{ */
 			phpdbg_out(" (internal function)\n");
 		}
 
-		file = zend_hash_str_find(Z_ARRVAL_P(tmp), ZEND_STRL("file"));
-		line = zend_hash_str_find(Z_ARRVAL_P(tmp), ZEND_STRL("line"));
+		file = zend_hash_find(Z_ARRVAL_P(tmp), ZSTR_KNOWN(ZEND_STR_FILE));
+		line = zend_hash_find(Z_ARRVAL_P(tmp), ZSTR_KNOWN(ZEND_STR_LINE));
+		function_name = zend_hash_find(Z_ARRVAL_P(tmp), ZSTR_KNOWN(ZEND_STR_FUNCTION));
+
 		zend_hash_move_forward_ex(Z_ARRVAL(zbacktrace), &position);
 	}
 
-	phpdbg_writeln("frame #%d: {main} at %s:"ZEND_LONG_FMT, i, Z_STRVAL_P(file), Z_LVAL_P(line));
+	/* This is possible for fibers' start closure for example, which have a frame that doesn't contain the info
+	 * of which location stated the fiber if that stack frame is already torn down. same behaviour with debug_backtrace(). */
+	if (file == NULL) {
+		phpdbg_writeln(" => %s (internal function)", Z_STRVAL_P(function_name));
+	} else {
+		phpdbg_writeln("frame #%d: {main} at %s:"ZEND_LONG_FMT, i, Z_STRVAL_P(file), Z_LVAL_P(line));
+	}
 
 	zval_ptr_dtor_nogc(&zbacktrace);
 	zend_string_release(Z_STR(startfile));

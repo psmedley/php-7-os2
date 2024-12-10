@@ -123,7 +123,9 @@ static const char *php_gai_strerror(int code)
 		{EAI_NONAME, "Name or service not known"},
 		{EAI_SERVICE, "Servname not supported for ai_socktype"},
 		{EAI_SOCKTYPE, "ai_socktype not supported"},
+#  ifdef EAI_SYSTEM
 		{EAI_SYSTEM, "System error"},
+#  endif
 		{0, NULL}
 	};
 	int i;
@@ -872,7 +874,7 @@ php_socket_t php_network_connect_socket_to_host(const char *host, unsigned short
 #if HAVE_IPV6 && HAVE_INET_PTON
 				struct sockaddr_in6 in6;
 #endif
-			} local_address;
+			} local_address = {0};
 			int local_address_len = 0;
 
 			if (sa->sa_family == AF_INET) {
@@ -884,7 +886,6 @@ php_socket_t php_network_connect_socket_to_host(const char *host, unsigned short
 					local_address_len = sizeof(struct sockaddr_in);
 					local_address.in4.sin_family = sa->sa_family;
 					local_address.in4.sin_port = htons(bindport);
-					memset(&(local_address.in4.sin_zero), 0, sizeof(local_address.in4.sin_zero));
 				}
 			}
 #if HAVE_IPV6 && HAVE_INET_PTON
@@ -894,6 +895,12 @@ php_socket_t php_network_connect_socket_to_host(const char *host, unsigned short
 					local_address.in6.sin6_family = sa->sa_family;
 					local_address.in6.sin6_port = htons(bindport);
 				}
+			}
+#endif
+#ifdef IP_BIND_ADDRESS_NO_PORT
+			{
+				int val = 1;
+				(void) setsockopt(sock, SOL_IP, IP_BIND_ADDRESS_NO_PORT, &val, sizeof(val));
 			}
 #endif
 			if (local_address_len == 0) {
@@ -974,7 +981,7 @@ connected:
 /* }}} */
 
 /* {{{ php_any_addr
- * Fills the any (wildcard) address into php_sockaddr_storage
+ * Fills any (wildcard) address into php_sockaddr_storage
  */
 PHPAPI void php_any_addr(int family, php_sockaddr_storage *addr, unsigned short port)
 {
@@ -1168,7 +1175,7 @@ PHPAPI void _php_emit_fd_setsize_warning(int max_fd)
 	php_error_docref(NULL, E_WARNING,
 		"PHP needs to be recompiled with a larger value of FD_SETSIZE.\n"
 		"If this binary is from an official www.php.net package, file a bug report\n"
-		"at http://bugs.php.net, including the following information:\n"
+		"at https://github.com/php/php-src/issues, including the following information:\n"
 		"FD_SETSIZE=%d, but you are using %d.\n"
 		" --enable-fd-setsize=%d is recommended, but you may want to set it\n"
 		"to match to maximum number of sockets each script will work with at\n"
