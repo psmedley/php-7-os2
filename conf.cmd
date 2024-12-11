@@ -5,3 +5,4 @@ SET LIBRARY_PATH=u:/extras/lib;U:/usr/lib;%LIBRARY_PATH%
 rem set GCCOPT=-static-libgcc
 set ld=ld.exe
 dash ./configure.sh
+rem HAVE_PG_CONTEXT_VISIBILITY main\php_config.h

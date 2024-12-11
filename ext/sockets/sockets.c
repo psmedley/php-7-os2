@@ -932,7 +932,11 @@ PHP_FUNCTION(socket_getsockname)
 	struct sockaddr_in6		*sin6;
 #endif
 #ifdef HAVE_INET_NTOP
+#ifndef __OS2__
 	char					addrbuf[INET6_ADDRSTRLEN];
+#else
+	char					addrbuf[INET_ADDRSTRLEN];
+#endif
 #endif
 	struct sockaddr_un		*s_un;
 	const char				*addr_string;
@@ -1009,7 +1013,11 @@ PHP_FUNCTION(socket_getpeername)
 	struct sockaddr_in6		*sin6;
 #endif
 #ifdef HAVE_INET_NTOP
+#ifndef __OS2__
 	char					addrbuf[INET6_ADDRSTRLEN];
+#else
+	char					addrbuf[INET_ADDRSTRLEN];
+#endif
 #endif
 	struct sockaddr_un		*s_un;
 	const char				*addr_string;
@@ -1392,7 +1400,11 @@ PHP_FUNCTION(socket_recvfrom)
 	struct sockaddr_in6	sin6;
 #endif
 #ifdef HAVE_INET_NTOP
-	char				addrbuf[INET6_ADDRSTRLEN];
+#ifndef __OS2__
+	char					addrbuf[INET6_ADDRSTRLEN];
+#else
+	char					addrbuf[INET_ADDRSTRLEN];
+#endif
 #endif
 	socklen_t			slen;
 	int					retval;

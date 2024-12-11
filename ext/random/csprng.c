@@ -60,6 +60,32 @@
 # include <sanitizer/msan_interface.h>
 #endif
 
+#ifdef __OS2__
+void os2_randget(char * buffer, int length)
+{
+	unsigned char randbyte();
+	unsigned int idx;
+
+	for (idx=0; idx<length; idx++)
+	buffer[idx] = randbyte();
+
+}
+
+unsigned char randbyte()
+{
+	int c;
+	unsigned char byte;
+	unsigned long ulrandom;
+	ulrandom = random();
+	
+	for (c = 0; c < sizeof(ulrandom); c++) {
+		byte ^= ((unsigned char *)&ulrandom)[c];
+	}
+
+	return byte;
+}
+#endif
+
 PHPAPI zend_result php_random_bytes(void *bytes, size_t size, bool should_throw)
 {
 #ifdef PHP_WIN32
@@ -70,6 +96,8 @@ PHPAPI zend_result php_random_bytes(void *bytes, size_t size, bool should_throw)
 		}
 		return FAILURE;
 	}
+#elif __OS2__
+	os2_randget(bytes, size);
 #elif HAVE_COMMONCRYPTO_COMMONRANDOM_H
 	/*
 	 * Purposely prioritized upon arc4random_buf for modern macOs releases
